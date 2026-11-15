@@ -56,6 +56,21 @@ PLAYER_TUI_BIN_DIR="$HOME/.local/bin" \
 bash install.sh
 ```
 
+## External player handoff
+
+The planned command surface accepts a local file or a direct stream URL, so
+another TUI, downloader, or file manager can launch it as its external player:
+
+```bash
+player-tui open /path/to/video.mkv
+player-tui open https://example.com/video.m3u8
+player-tui /path/to/video.mkv
+```
+
+Completed downloads can be opened directly by path, and media browsers can hand
+off a stream URL without a separate wrapper. Generic handoff only; the player
+does not include a scraper or downloader for third-party catalogues.
+
 ## Requirements
 
 - Linux, macOS, or WSL (primary target: Linux)
@@ -64,6 +79,6 @@ bash install.sh
 
 ## License and naming
 
-License is not finalized yet. The project will not use VLC's name, cone logo, or
+MIT. See [`LICENSE`](LICENSE). The project will not use VLC's name, cone logo, or
 branding, and will dynamically link libVLC under the LGPL. Third-party notices
 will be recorded in `LICENSES.md` before release.

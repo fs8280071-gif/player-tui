@@ -8,6 +8,8 @@
 
 ## Decisions
 
+- License: MIT (`LICENSE`). Dynamically linked LGPL libVLC is compatible;
+  `LICENSES.md` is still required for third-party notices.
 - Playback engine: libVLC 3.0.24 (LGPL-2.1+), dynamically linked. Former mpv IPC
   idea was rejected after benchmarks; do not switch engines without a new record.
 - Language: Go 1.24 + Vaxis (`github.com/rockorager/vaxis`). libVLC access via a
@@ -48,6 +50,8 @@
   design decisions, MVP criteria, top-20 build order, phases, risks, and sources.
 - Created the public GitHub repo, added `README.md`, and added `install.sh` for
   one-command source download/update; it will build once a Go target exists.
+- Added the MIT license and documented generic external-player handoff for local
+  files and direct stream URLs.
 
 ## Benchmark summary
 

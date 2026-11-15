@@ -604,8 +604,8 @@ Risks:
 
 Open questions:
 
-1. Final project name and license. GPL-3.0-or-later is the simplest fit for a
-   GPL/VLC ecosystem; MIT is possible with dynamic LGPL libVLC, but needs review.
+1. Final project name. The license is **MIT** (see `LICENSE`); dynamically
+   linked LGPL libVLC is compatible, but third-party notices still need review.
 2. Windows native in V1 or WSL-only until V2?
 3. Link FFmpeg for embedded text subtitles, or require an external `ffmpeg`
    fallback in V1?
