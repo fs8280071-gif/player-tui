@@ -18,7 +18,8 @@
 - Audio: no audio / dummy for benchmarks until real audio is configured.
 - VLC reference: `/root/vlc-3.0.24` (outside the repo); `vlc-android/` is
   gitignored and kept for reference only.
-- Remote: `https://gitlab.com/fs8280071-gif/player-tui` (private).
+- Remotes: GitLab `https://gitlab.com/fs8280071-gif/player-tui` (origin,
+  private) and GitHub `https://github.com/fs8280071-gif/player-tui` (public).
 
 ## Done
 
@@ -45,6 +46,8 @@
   `mattn/go-sixel`, `asticode/go-astisub`, `godbus/dbus/v5`, and `fsnotify`.
 - Wrote `FEATURES.md`: 144 feature rows across 11 categories, cross-cutting
   design decisions, MVP criteria, top-20 build order, phases, risks, and sources.
+- Created the public GitHub repo, added `README.md`, and added `install.sh` for
+  one-command source download/update; it will build once a Go target exists.
 
 ## Benchmark summary
 
