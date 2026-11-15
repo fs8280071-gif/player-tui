@@ -232,9 +232,10 @@ always send cleanup on normal exit, signal, panic, and resize.
 | L07 | Play counts and ratings | Track play count, last played, rating, skip count. | cmus, musikcube, kew | Medium | V2 | Easy | SQLite; opt-in; never upload. | [CMUS][CMUS] |
 | L08 | Smart playlists | Rule-based playlists (genre, rating, recently added, not played). | musikcube, cmus | Medium | V2 | Medium | Query DSL compiled to SQL; preview count before save. | [MUSIKCUBE][MUSIKCUBE] |
 | L09 | Duplicates and missing files | Detect duplicate tracks; mark missing files without deleting history. | musikcube | Medium | V1 | Medium | Hash only on demand; missing state; relink by size/tag. | [MUSIKCUBE][MUSIKCUBE] |
-| L10 | Network library | Browse SMB/NFS/SFTP/UPnP libraries. | VLC, Kodi | Low | V2 | Hard | libVLC modules; credentials handling; no custom auth store. | [VLC][VLC] |
+| L10 | Network shares | Browse SMB/NFS/SFTP shares. | VLC, Kodi | Low | V2 | Hard | libVLC modules; credentials in OS keyring/env; no custom auth store. | [VLC][VLC] |
 | L11 | Tag editing | Edit common tags and cover art. | musikcube, EasyTAG | Low | V2 | Hard | TagLib write path; backup; atomic replace; format-specific limits. | [TAGLIB][TAGLIB] |
 | L12 | Local-only, privacy, stats | No telemetry; library stays local; index wipe and stats. | cmus, musikcube | High | MVP | Easy | Local DB; `--privacy`; wipe command; no network calls by default. | [CMUS][CMUS] |
+| L13 | Personal media servers | Browse and play Jellyfin, Plex, and DLNA/UPnP libraries on the user's own servers; direct-play, resume, and track/subtitle selection. | Jellyfin/Plex clients, Kodi, VLC | High | V1 | Hard | One adapter per protocol; Jellyfin REST + WebSocket, Plex HTTP API + token, DLNA/UPnP via SSDP; credentials in OS keyring/env and never logs; hand direct-play URLs to libVLC; no cloud relay. | [JELLYFIN][PLEX][UPNP] |
 
 Library schema sketch: `tracks`, `albums`, `artists`, `covers`, `playlists`,
 `playlist_items`, `queue`, `bookmarks`, `settings`, `ai_jobs`, `transcripts`,
@@ -263,7 +264,7 @@ read-only unless the user explicitly edits tags.
 
 | ID | Feature | Description | Who has it | Demand | Priority | Difficulty | Library / design notes | Source |
 |---|---|---|---|---|---|---|---|---|
-| C01 | Non-interactive play/open | `player-tui play/open <path-or-url>` without entering the TUI. | mpv, mpvc | High | V1 | Easy | Same engine; `--no-tui`; JSON errors. | [MPV][MPV] |
+| C01 | Non-interactive control | Play/pause/seek/status commands without entering the TUI; a running instance is optional. | mpv, mpvc | High | V1 | Easy | Same service layer; `--json` errors; opening a target is C12. | [MPV][MPV] |
 | C02 | Remote commands | Play/pause/seek/volume/queue via CLI to a running instance. | mpvc, mpv IPC | High | V1 | Easy | Thin client over IPC; no shell injection. | [MPVC][MPVC] |
 | C03 | JSON events | JSON Lines state/track/queue/error events for scripts. | mpv JSON IPC | High | V1 | Easy | Stable schema; versioned; stdout only in `--json`. | [MPV][MPV] |
 | C04 | Unix socket IPC | Authenticated local control socket; Windows named pipe later. | mpv, mpvc | High | V1 | Medium | `$XDG_RUNTIME_DIR/player-tui.sock`; file mode 0600; peer checks. | [XDG][XDG] |
@@ -274,12 +275,14 @@ read-only unless the user explicitly edits tags.
 | C09 | Doctor | Show libVLC, codecs, terminal capabilities, audio devices, models, config. | chafa, Yazi | High | MVP | Medium | `--json`; test pattern; actionable fixes. | [YAZI][YAZI] |
 | C10 | Library/AI CLI wrappers | `library scan/search`, `subs gen`, `models list/download`, `ai index`. | None combined | High | V1 | Easy | Shared service layer; progress/cancel; JSON output. | [MCP][MCP] |
 | C11 | Exit codes and logs | Predictable exit codes; structured logs; redaction. | Standard | High | MVP | Easy | `slog`; `--log-file`; no secrets/PII; `--verbose`. | [GOFUZZ][GOFUZZ] |
+| C12 | Generic launcher command | `player-tui open <local-file-or-url>` with `--title`, `--sub-file`, and `--start`; designed for external downloaders and media browsers. | mpv | High | MVP | Easy | Parse before TUI; canonicalize paths and validate URLs; `--start` accepts `SS`, `MM:SS`, `HH:MM:SS`; attach subtitle before play; sanitize title; enter TUI by default. | [MPV][MPV] |
 
 Command surface target:
 
 ```text
 player-tui [paths/URLs]
-player-tui play|open <target>
+player-tui open <target> [--title <text>] [--sub-file <path>] [--start <time>]
+player-tui play <target>
 player-tui queue add|list|clear
 player-tui library scan|search
 player-tui subs gen|translate|convert
@@ -506,8 +509,9 @@ AI architecture:
 
 MVP is the first usable terminal player, not a feature-complete competitor:
 
-- Open local files/directories/URLs; play/pause/stop/seek; queue; external
-  subtitles; audio track selection; volume.
+- Open local files/directories/URLs; launch a file or URL from the command line
+  with `--title`, `--sub-file`, and `--start`; play/pause/stop/seek; queue;
+  external subtitles; audio track selection; volume.
 - Kitty, Sixel, half-block, and ASCII rendering with capability detection,
   frame dropping, cleanup, and terminal restore.
 - Basic now-playing/status/seek UI, command palette/help, themes/NO_COLOR,
@@ -526,6 +530,8 @@ MVP acceptance:
 4. Kitty and Sixel images are deleted on exit; half-block leaves no stale cells.
 5. Malformed subtitle/metadata/playlist input cannot inject terminal escapes.
 6. `doctor` correctly identifies the test terminal and explains fallbacks.
+7. `player-tui open` honors `--title`, `--sub-file`, and `--start` for a local
+   file and a direct stream URL.
 
 ## 7. Top 20 build-first list
 
@@ -553,7 +559,7 @@ engine contract is stable.
 | 15 | U04 + U05 | Command palette, help, keymap | MVP | Discoverability without a manual; exit when every action is reachable and remappable. |
 | 16 | U06 | Themes and NO_COLOR | MVP | Terminal diversity and accessibility; exit when three themes, 256/16-color fallback, and `NO_COLOR` all work. |
 | 17 | L03 | SQLite library index and fuzzy search | V1 | Turns a file browser into a player; exit when 1k tracks scan and search returns in < 50 ms. |
-| 18 | C01 + C03 | Non-interactive play and JSON events | V1 | Automation and testing; exit when scripts can play/seek/query and consume stable JSON Lines. |
+| 18 | C01 + C03 | Non-interactive control and JSON events | V1 | Automation and testing; exit when scripts can play/seek/query and consume stable JSON Lines. |
 | 19 | AC02 | Plain mode and screen-reader output | MVP | Accessibility is not optional; exit when every core action works without graphics/color and status is line-oriented. |
 | 20 | AI01 | Offline ASR subtitles | V1 (AI v1) | First major differentiator; exit when a local file generates an SRT with progress/cancel, no network, and editable output. |
 
@@ -563,13 +569,13 @@ Q&A, plugins, and native Windows. They are V1/V2 and should not delay the core.
 
 ## 8. Suggested phases
 
-- **Phase C (MVP)**: every MVP row, starting with top 1-16 and 19. Engine, clock,
-  security/restore, renderers, formats, browser, queue, external subtitles,
-  volume/track selection, layout, commands, themes, plain mode. No AI, no library
-  DB required.
-- **Phase D (AI v1 + library)**: top 17-18 and 20; AI04, AI06, AI22, AI23, AI25.
-  Batch ASR, VAD, model manager, privacy/wipe, job scheduler. Library index and
-  CLI/JSON land here.
+- **Phase C (MVP)**: every MVP row, including the generic `open` launcher (C12),
+  starting with top 1-16 and 19. Engine, clock, security/restore, renderers,
+  formats, browser, queue, external subtitles, volume/track selection, layout,
+  commands, themes, plain mode. No AI, no library DB, no media servers required.
+- **Phase D (AI v1 + library)**: top 17-18 and 20; AI04, AI06, AI22, AI23, AI25;
+  Jellyfin/Plex/DLNA client (L13). Batch ASR, VAD, model manager, privacy/wipe,
+  job scheduler. Library index and CLI/JSON land here.
 - **Phase E (parity)**: iTerm2, resume, playlists, screenshots,
   [MPRIS][MPRIS] ([godbus][GODBUS]), audio device/EQ/ReplayGain, embedded text
   subtitles, network streams, macOS, packaging. This is the first "public"
@@ -692,6 +698,9 @@ Reference links used above. Re-check versions and URLs before publishing.
 [GOFUZZ]: https://go.dev/doc/security/fuzz/
 [GORELEASER]: https://goreleaser.com/
 [NOCOLOR]: https://no-color.org/
+[JELLYFIN]: https://api.jellyfin.org/
+[PLEX]: https://plexapi.dev/
+[UPNP]: https://openconnectivity.org/developer/specifications/upnp-resources/upnp/
 [MPRIS]: https://specifications.freedesktop.org/mpris-spec/latest/
 [XDG]: https://specifications.freedesktop.org/basedir-spec/latest/
 [PTY]: https://github.com/creack/pty

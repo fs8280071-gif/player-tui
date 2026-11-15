@@ -5,12 +5,14 @@ library, terminal-native rendering, and optional offline AI.
 
 ## Status
 
-Phase B (research and feature inventory) is complete. There is **no runnable
-player binary yet**; the MVP build starts in Phase C. The installer currently
-downloads the source and will build the binary automatically once a Go build
-target exists.
+Phase C (MVP design) is in progress: architecture and roadmap are written.
+There is **no runnable player binary yet**; implementation follows the remaining
+design docs. The installer downloads the source and will build the binary
+automatically once a Go build target exists.
 
-- Feature inventory and build plan: [`FEATURES.md`](FEATURES.md)
+- Feature inventory: [`FEATURES.md`](FEATURES.md)
+- Roadmap: [`ROADMAP.md`](ROADMAP.md)
+- Architecture: [`ARCHITECTURE.md`](ARCHITECTURE.md)
 - Current status and decisions: [`PROGRESS.md`](PROGRESS.md)
 - libVLC benchmark: [`docs/benchmarks/libvlc-callbacks.md`](docs/benchmarks/libvlc-callbacks.md)
 
@@ -63,6 +65,8 @@ another TUI, downloader, or file manager can launch it as its external player:
 
 ```bash
 player-tui open /path/to/video.mkv
+player-tui open /path/to/video.mkv --title "My Video" \
+  --sub-file /path/to/video.srt --start 00:02:30
 player-tui open https://example.com/video.m3u8
 player-tui /path/to/video.mkv
 ```

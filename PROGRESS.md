@@ -2,8 +2,9 @@
 
 ## Status
 
-- Phase: B complete; `FEATURES.md` written and reviewed
-- Next: Phase C planning docs and MVP build, after user approval
+- Phase: C in progress; `ROADMAP.md` and `ARCHITECTURE.md` written
+- Next: paused after `ARCHITECTURE.md` for review; then `TECH_STACK.md`,
+  `DESIGN.md`, `LICENSES.md`, and the MVP build
 - Blocked: `glab` token; no local audio/Kitty/Sixel for end-to-end testing
 
 ## Decisions
@@ -46,12 +47,15 @@
 - Confirmed current Vaxis module path and versions; `charmbracelet/vaxis` does
   not exist. Confirmed availability of `dhowden/tag`, `modernc.org/sqlite`,
   `mattn/go-sixel`, `asticode/go-astisub`, `godbus/dbus/v5`, and `fsnotify`.
-- Wrote `FEATURES.md`: 144 feature rows across 11 categories, cross-cutting
+- Wrote `FEATURES.md`: 146 feature rows across 11 categories, cross-cutting
   design decisions, MVP criteria, top-20 build order, phases, risks, and sources.
 - Created the public GitHub repo, added `README.md`, and added `install.sh` for
   one-command source download/update; it will build once a Go target exists.
 - Added the MIT license and documented generic external-player handoff for local
   files and direct stream URLs.
+- Added the MVP launcher (`C12`: `open` plus `--title`, `--sub-file`, `--start`)
+  and the V1 Jellyfin/Plex/DLNA client (`L13`) to `FEATURES.md`.
+- Wrote `ROADMAP.md` and `ARCHITECTURE.md`; Phase C stops here for review.
 
 ## Benchmark summary
 
@@ -72,9 +76,10 @@
 
 ## Next
 
-- Phase C (after approval): `ARCHITECTURE.md`, `TECH_STACK.md`, `DESIGN.md`,
-  `ROADMAP.md`, `LICENSES.md`, then the MVP build starting with engine
-  lifecycle, clock/sync, terminal safety, and the half-block renderer.
+- Paused after `ARCHITECTURE.md` for review. After approval, Phase C continues
+  with `TECH_STACK.md`, `DESIGN.md`, and `LICENSES.md`, then the MVP build
+  starting with engine lifecycle, clock/sync, terminal safety, and the
+  half-block renderer.
 - AI v1 follows MVP: offline ASR, VAD, batch jobs, model manager, privacy/wipe,
   and scheduler. Live audio-tap features remain V2.
 
