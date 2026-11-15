@@ -1,0 +1,21 @@
+# VLC reference trees: never commit VLC sources into this repo
+/vlc-android/
+/vlc/
+/vendor/vlc/
+
+# Build outputs
+/bin/
+/build/
+/dist/
+*.o
+*.a
+*.so
+*.dylib
+*.exe
+*.test
+
+# Local runtime data
+*.db
+*.db-journal
+*.log
+.DS_Store
