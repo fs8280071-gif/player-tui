@@ -63,6 +63,9 @@ PLAYER_TUI_BIN_DIR="$HOME/.local/bin" \
 bash install.sh
 ```
 
+When `install.sh` is run from a source checkout, it builds that checkout. Set
+`PLAYER_TUI_FROM_REMOTE=1` to force a fresh clone/update instead.
+
 ## Usage
 
 ```bash

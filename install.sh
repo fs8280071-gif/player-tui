@@ -5,6 +5,18 @@ REPO_URL="${PLAYER_TUI_REPO_URL:-https://github.com/fs8280071-gif/player-tui.git
 INSTALL_DIR="${PLAYER_TUI_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/player-tui}"
 BIN_DIR="${PLAYER_TUI_BIN_DIR:-$HOME/.local/bin}"
 
+SCRIPT_DIR=""
+if [ -n "${BASH_SOURCE[0]:-}" ] && [ -f "${BASH_SOURCE[0]}" ]; then
+  SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+fi
+
+LOCAL_SOURCE=0
+if [ "${PLAYER_TUI_FROM_REMOTE:-0}" != "1" ] &&
+   [ -n "$SCRIPT_DIR" ] && [ -f "$SCRIPT_DIR/go.mod" ]; then
+  INSTALL_DIR="$SCRIPT_DIR"
+  LOCAL_SOURCE=1
+fi
+
 say() {
   printf '%s\n' "$*"
 }
@@ -18,7 +30,9 @@ command -v git >/dev/null 2>&1 || die "git is required to download player-tui"
 
 mkdir -p "$(dirname "$INSTALL_DIR")"
 
-if [ -d "$INSTALL_DIR/.git" ]; then
+if [ "$LOCAL_SOURCE" -eq 1 ]; then
+  say "Using local source in $INSTALL_DIR"
+elif [ -d "$INSTALL_DIR/.git" ]; then
   say "Updating source in $INSTALL_DIR"
   git -C "$INSTALL_DIR" pull --ff-only
 elif [ -e "$INSTALL_DIR" ]; then
