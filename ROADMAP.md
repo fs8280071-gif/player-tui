@@ -1,6 +1,6 @@
 # player-tui roadmap
 
-Status: Phase C in progress. This roadmap is the delivery view; [`FEATURES.md`](FEATURES.md)
+Status: Phase C design complete; MVP playback slice implemented. This roadmap is the delivery view; [`FEATURES.md`](FEATURES.md)
 is the feature inventory and [`ARCHITECTURE.md`](ARCHITECTURE.md) is the MVP
 technical design.
 
@@ -20,6 +20,10 @@ land during Phase D or Phase E.
 Target: a single local file or direct URL plays smoothly, can be launched from
 the command line, and every exit path restores the terminal.
 
+Current slice: local files and direct URLs play through libVLC with I420
+half-block output, pause/seek/quit, and terminal restore. `play` is an alias for
+`open`. The remaining Phase C items are listed below.
+
 ### C1. Core playback and launcher
 
 - [ ] Engine lifecycle and transport: open, play, pause, stop, seek, rate, end,
@@ -27,14 +31,14 @@ the command line, and every exit path restores the terminal.
 - [ ] Playback clock and A/V sync; audio is the master clock (`P02`).
 - [ ] I420 video callbacks with RV32 fallback; bounded frame mailbox (`V01`,
       `V06`).
-- [ ] **Generic launcher command**: `player-tui open <local-file-or-url>` with
+- [x] **Generic launcher command**: `player-tui open <local-file-or-url>` with
       `--title`, `--sub-file`, and `--start` (`C12`, MVP).
-- [ ] `--start` parsing: `SS`, `MM:SS`, `HH:MM:SS`; bounds-checked and applied
+- [x] `--start` parsing: `SS`, `MM:SS`, `HH:MM:SS`; bounds-checked and applied
       after media opens.
-- [ ] `--sub-file` validates and attaches an external subtitle before playback.
-- [ ] `--title` overrides the display title only; never changes the source name
+- [x] `--sub-file` validates and attaches an external subtitle before playback.
+- [x] `--title` overrides the display title only; never changes the source name
       or metadata.
-- [ ] Opening a target enters the TUI by default; a non-TUI mode remains a V1
+- [x] Opening a target enters the TUI by default; a non-TUI mode remains a V1
       concern (`C01`).
 - [ ] Queue, shuffle, repeat, and next/previous (`P05`).
 - [ ] Volume, mute, audio/subtitle track selection (`P04`, `P06`).
@@ -43,12 +47,12 @@ the command line, and every exit path restores the terminal.
 ### C2. Terminal output
 
 - [ ] Capability detection and `doctor` (`V01`, `C09`).
-- [ ] Half-block truecolor renderer (`V06`).
+- [x] Half-block truecolor renderer (`V06`).
 - [ ] Kitty renderer with image IDs, placement, resize, and cleanup (`V03`).
 - [ ] Sixel renderer with palette/repeat handling and cleanup (`V04`).
 - [ ] ASCII fallback for narrow, monochrome, and non-graphics terminals.
 - [ ] Frame scheduler with late-frame dropping and status metrics (`V09`).
-- [ ] Escape safety, alternate-screen/raw-mode restore, signal/panic cleanup
+- [x] Escape safety, alternate-screen/raw-mode restore, signal/panic cleanup
       (`PL08`, `PL09`).
 - [ ] Reduced-bandwidth mode and configurable output budget.
 

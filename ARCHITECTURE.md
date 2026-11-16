@@ -575,5 +575,10 @@ Open issues to resolve during Phase C:
 6. Plex API version support and token re-auth flow.
 7. Native crash containment and whether V2 moves the engine to a supervisor.
 
-The next Phase C deliverable is `TECH_STACK.md`, followed by `DESIGN.md`. No
-implementation starts before the architecture and stack decisions are reviewed.
+Phase C design is complete (`TECH_STACK.md`, `DESIGN.md`, `LICENSES.md`). The
+first MVP slice is implemented in `cmd/player-tui` and `internal/{cli,app,term,
+video,render/halfblock,engine/libvlc}`: libVLC I420 callbacks, a polled frame
+copy, truecolor half-block output, pause/seek/quit, and terminal restore. It uses
+`golang.org/x/term` behind a local terminal layer; the Vaxis pane UI and
+Kitty/Sixel renderers remain follow-up work, as do the RV32 fallback, explicit
+frame-drop scheduler, and subtitle rendering.

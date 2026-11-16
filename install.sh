@@ -28,28 +28,47 @@ else
   git clone --depth 1 "$REPO_URL" "$INSTALL_DIR"
 fi
 
-if [ ! -f "$INSTALL_DIR/go.mod" ]; then
-  say "Source downloaded."
-  say "No runnable player yet: Phase B planning is complete, MVP build starts in Phase C."
-  exit 0
-fi
-
+[ -f "$INSTALL_DIR/go.mod" ] || die "no Go build target found in $INSTALL_DIR"
 command -v go >/dev/null 2>&1 || die "Go 1.24+ is required to build player-tui"
+command -v pkg-config >/dev/null 2>&1 || die "pkg-config is required to find libVLC"
+pkg-config --exists libvlc 2>/dev/null || die \
+  "libVLC development files not found. Install libvlc-dev (Debian/Ubuntu), vlc-devel (Fedora), or vlc (Arch), then rerun."
 
+go_version="$(go env GOVERSION 2>/dev/null || true)"
+say "Building player-tui with $go_version"
 mkdir -p "$BIN_DIR"
-
-if [ -d "$INSTALL_DIR/cmd/player-tui" ]; then
-  say "Building player-tui"
-  (cd "$INSTALL_DIR" && go build -trimpath -o "$BIN_DIR/player-tui" ./cmd/player-tui)
-elif [ -f "$INSTALL_DIR/main.go" ]; then
-  say "Building player-tui"
-  (cd "$INSTALL_DIR" && go build -trimpath -o "$BIN_DIR/player-tui" .)
-else
-  die "No Go build target found (expected cmd/player-tui or main.go)"
-fi
-
+(
+  cd "$INSTALL_DIR"
+  go build -trimpath -ldflags "-s -w" -o "$BIN_DIR/player-tui" ./cmd/player-tui
+)
 say "Installed: $BIN_DIR/player-tui"
-case ":$PATH:" in
-  *":$BIN_DIR:"*) ;;
-  *) say "Add $BIN_DIR to PATH to run player-tui from any terminal." ;;
-esac
+
+ensure_path() {
+  case ":$PATH:" in
+    *":$BIN_DIR:"*) return 0 ;;
+  esac
+
+  local marker="# player-tui PATH"
+  local line
+  line="export PATH=\"$BIN_DIR:\$PATH\""
+  local updated=0
+  for rc in "$HOME/.profile" "$HOME/.bashrc"; do
+    [ -f "$rc" ] || continue
+    if ! grep -Fq "$marker" "$rc"; then
+      printf '\n%s\n%s\n' "$marker" "$line" >>"$rc"
+      updated=1
+    fi
+  done
+  if [ "$updated" -eq 1 ]; then
+    say "Added $BIN_DIR to PATH in your shell profile."
+    say "Open a new terminal, or run: export PATH=\"$BIN_DIR:\$PATH\""
+  else
+    say "Add $BIN_DIR to PATH to run player-tui from any terminal."
+  fi
+}
+
+ensure_path
+
+say ""
+say "Play something:"
+say "  player-tui play /path/to/video.mkv"

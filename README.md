@@ -5,14 +5,18 @@ library, terminal-native rendering, and optional offline AI.
 
 ## Status
 
-Phase C (MVP design) is in progress: architecture and roadmap are written.
-There is **no runnable player binary yet**; implementation follows the remaining
-design docs. The installer downloads the source and will build the binary
-automatically once a Go build target exists.
+The first runnable MVP slice works: `player-tui play <file>` opens local media
+with libVLC, renders I420 video as truecolor half-blocks, and supports pause,
+seek, and quit. Phase C design docs are complete (`TECH_STACK.md`, `DESIGN.md`,
+`LICENSES.md`). The broader player (browser, queue, subtitles, Kitty/Sixel,
+library, AI) is still in progress.
 
 - Feature inventory: [`FEATURES.md`](FEATURES.md)
 - Roadmap: [`ROADMAP.md`](ROADMAP.md)
 - Architecture: [`ARCHITECTURE.md`](ARCHITECTURE.md)
+- Tech stack: [`TECH_STACK.md`](TECH_STACK.md)
+- UI design: [`DESIGN.md`](DESIGN.md)
+- Third-party licenses: [`LICENSES.md`](LICENSES.md)
 - Current status and decisions: [`PROGRESS.md`](PROGRESS.md)
 - libVLC benchmark: [`docs/benchmarks/libvlc-callbacks.md`](docs/benchmarks/libvlc-callbacks.md)
 
@@ -25,8 +29,9 @@ curl -fsSL https://raw.githubusercontent.com/fs8280071-gif/player-tui/main/insta
 ```
 
 This clones or updates the source in
-`${XDG_DATA_HOME:-$HOME/.local/share}/player-tui`. If Go and a build target are
-present, it also builds `player-tui` into `$HOME/.local/bin`.
+`${XDG_DATA_HOME:-$HOME/.local/share}/player-tui`, builds `player-tui` into
+`$HOME/.local/bin`, and adds that directory to your shell PATH when needed.
+Building requires Go 1.24+, `libvlc-dev`, and `pkg-config`.
 
 Prefer to inspect the script first:
 
@@ -58,6 +63,17 @@ PLAYER_TUI_BIN_DIR="$HOME/.local/bin" \
 bash install.sh
 ```
 
+## Usage
+
+```bash
+player-tui play /path/to/video.mkv
+player-tui play https://example.com/video.m3u8 --start 00:02:30
+```
+
+Keys: `space` pause/resume, `left`/`right` seek -5 s/+5 s, `q` quit. The
+half-block renderer needs truecolor for the best result. Use
+`PLAYER_TUI_DUMMY_AUDIO=1` for headless tests with no audio device.
+
 ## External player handoff
 
 The planned command surface accepts a local file or a direct stream URL, so
@@ -78,7 +94,7 @@ does not include a scraper or downloader for third-party catalogues.
 ## Requirements
 
 - Linux, macOS, or WSL (primary target: Linux)
-- libVLC 3.x at runtime (the player will link dynamically)
+- libVLC 3.x at runtime and `libvlc-dev` + `pkg-config` to build
 - Go 1.24+ only if building from source
 
 ## License and naming

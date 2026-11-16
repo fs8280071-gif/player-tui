@@ -2,25 +2,37 @@
 
 ## Status
 
-- Phase: C in progress; `ROADMAP.md` and `ARCHITECTURE.md` written
-- Next: paused after `ARCHITECTURE.md` for review; then `TECH_STACK.md`,
-  `DESIGN.md`, `LICENSES.md`, and the MVP build
-- Blocked: `glab` token; no local audio/Kitty/Sixel for end-to-end testing
+- Phase C design docs are complete: `ROADMAP.md`, `ARCHITECTURE.md`,
+  `TECH_STACK.md`, `DESIGN.md`, `LICENSES.md`.
+- MVP implementation started: a runnable playback slice exists (`player-tui
+  play <file>`), with libVLC I420 callbacks, half-block truecolor rendering,
+  pause, seek, and terminal restore.
+- Next: capability detection/`doctor`, frame scheduler, subtitle rendering,
+  queue, Kitty/Sixel, and the Vaxis pane UI.
+- Blocked: `glab` token; no local audio/Kitty/Sixel for end-to-end testing.
 
 ## Decisions
 
 - License: MIT (`LICENSE`). Dynamically linked LGPL libVLC is compatible;
-  `LICENSES.md` is still required for third-party notices.
+  third-party notices are recorded in `LICENSES.md`.
 - Playback engine: libVLC 3.0.24 (LGPL-2.1+), dynamically linked. Former mpv IPC
   idea was rejected after benchmarks; do not switch engines without a new record.
 - Language: Go 1.24 + Vaxis (`github.com/rockorager/vaxis`). libVLC access via a
   thin in-repo cgo layer; `adrg/libvlc-go` exposes no raw video callbacks.
 - Frame path: request I420, sample Y/U/V at the terminal grid, convert to RGB in
-  Go; RV32 fallback. Audio is the master clock and late video frames are dropped.
+  Go. RV32 fallback and the explicit drop scheduler are still TODO; libVLC audio
+  remains the master clock.
 - Do not enable `avcodec-fast` by default. Keep automatic decoder threads.
 - Audio: no audio / dummy for benchmarks until real audio is configured.
 - VLC reference: `/root/vlc-3.0.24` (outside the repo); `vlc-android/` is
   gitignored and kept for reference only.
+- Terminal layer for the first slice: `golang.org/x/term` plus a small ANSI
+  compositor. Vaxis remains the target for panes/palette; `term.Surface` keeps
+  the swap contained.
+- Frame delivery for the first slice: poll the C-owned I420 buffer at 60 Hz and
+  copy only when the display callback increments the sequence. This avoids Go
+  callbacks from libVLC threads; a mailbox/clock abstraction stays on the Phase
+  C follow-up list.
 - Remotes: GitLab `https://gitlab.com/fs8280071-gif/player-tui` (origin,
   private) and GitHub `https://github.com/fs8280071-gif/player-tui` (public).
 
@@ -55,7 +67,21 @@
   files and direct stream URLs.
 - Added the MVP launcher (`C12`: `open` plus `--title`, `--sub-file`, `--start`)
   and the V1 Jellyfin/Plex/DLNA client (`L13`) to `FEATURES.md`.
-- Wrote `ROADMAP.md` and `ARCHITECTURE.md`; Phase C stops here for review.
+- Wrote `ROADMAP.md` and `ARCHITECTURE.md`; Phase C design baseline.
+- Wrote `TECH_STACK.md`, `DESIGN.md`, and `LICENSES.md` (Phase C complete).
+- Implemented the first MVP slice in Go 1.24:
+  - `cmd/player-tui` with `play`/`open`, `--title`, `--sub-file`, `--start`.
+  - Thin cgo libVLC player with I420 format/lock/unlock/display callbacks, a
+    mutex-protected frame buffer, and sequence-based frame polling.
+  - Half-block truecolor renderer with box sampling, aspect fit, letterboxing,
+    centered layout, and a status row.
+  - Raw mode, alternate screen, key parsing (space/arrows/q), SIGINT/SIGTERM
+    handling, and idempotent terminal restore.
+  - `install.sh` now checks libVLC, builds with `go build`, installs to
+    `$HOME/.local/bin`, and adds that directory to the shell PATH.
+- Generated a 5-second 320x240 MPEG-4 test clip with ffmpeg and drove the binary
+  through a PTY: half-block cells, truecolor SGR, pause, seek clamp, quit,
+  alt-screen enter/leave, and cursor restore all passed (exit 0).
 
 ## Benchmark summary
 
@@ -76,10 +102,9 @@
 
 ## Next
 
-- Paused after `ARCHITECTURE.md` for review. After approval, Phase C continues
-  with `TECH_STACK.md`, `DESIGN.md`, and `LICENSES.md`, then the MVP build
-  starting with engine lifecycle, clock/sync, terminal safety, and the
-  half-block renderer.
+- Continue the MVP: capability detection and `doctor`, RV32 fallback, frame
+  scheduler/drop metrics, external subtitle cues, queue/playlists, and the
+  Vaxis pane UI. Then Kitty/Sixel encoders and cleanup tests.
 - AI v1 follows MVP: offline ASR, VAD, batch jobs, model manager, privacy/wipe,
   and scheduler. Live audio-tap features remain V2.
 
