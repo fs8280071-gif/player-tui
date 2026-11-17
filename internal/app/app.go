@@ -18,6 +18,7 @@ import (
 	"github.com/fs8280071-gif/player-tui/internal/render"
 	"github.com/fs8280071-gif/player-tui/internal/sanitize"
 	"github.com/fs8280071-gif/player-tui/internal/term"
+	"github.com/fs8280071-gif/player-tui/internal/theme"
 	"github.com/fs8280071-gif/player-tui/internal/video"
 )
 
@@ -38,6 +39,7 @@ type Options struct {
 	Volume    int
 	Resume    bool
 	ConfigDir string
+	Theme     theme.Theme
 }
 
 func Run(ctx context.Context, opts Options) error {
@@ -146,6 +148,10 @@ func Run(ctx context.Context, opts Options) error {
 		}
 	}()
 	noColor := os.Getenv("NO_COLOR") != ""
+	th := opts.Theme
+	if th.Name == "" {
+		th, _ = theme.Parse("catppuccin")
+	}
 	helpVisible := false
 	notice := ""
 	noticeUntil := time.Time{}
@@ -309,16 +315,16 @@ func Run(ctx context.Context, opts Options) error {
 			if len(specs) > 1 {
 				title = fmt.Sprintf("[%d/%d] %s", index+1, len(specs), title)
 			}
-			statusBuf = buildStatus(statusBuf, title, snap, w, h, noColor, mode.String(), snap.Rate, notice)
+			statusBuf = buildStatus(statusBuf, title, snap, w, h, noColor, mode.String(), snap.Rate, notice, th)
 			t.WriteString(string(statusBuf))
 		}
 		if helpVisible {
-			t.WriteString(string(buildHelp(w, h, noColor)))
+			t.WriteString(string(buildHelp(w, h, noColor, th)))
 		}
 	}
 }
 
-func buildStatus(dst []byte, title string, snap engine.Snapshot, width, height int, noColor bool, mode string, rate float64, notice string) []byte {
+func buildStatus(dst []byte, title string, snap engine.Snapshot, width, height int, noColor bool, mode string, rate float64, notice string, th theme.Theme) []byte {
 	dst = dst[:0]
 	if width < 1 {
 		width = 1
@@ -357,9 +363,7 @@ func buildStatus(dst []byte, title string, snap engine.Snapshot, width, height i
 	dst = appendInt(dst, height)
 	dst = append(dst, ";1H"...)
 	dst = append(dst, "\x1b[0m"...)
-	if !noColor {
-		dst = append(dst, "\x1b[7m"...)
-	}
+	dst = append(dst, th.StatusStyle(noColor)...)
 	dst = append(dst, line...)
 	dst = append(dst, "\x1b[0m"...)
 	return dst
@@ -408,7 +412,7 @@ func appendInt(dst []byte, n int) []byte {
 	return append(dst, tmp[i:]...)
 }
 
-func buildHelp(width, height int, noColor bool) []byte {
+func buildHelp(width, height int, noColor bool, th theme.Theme) []byte {
 	lines := []string{
 		" player-tui keys ",
 		"",
@@ -455,11 +459,7 @@ func buildHelp(width, height int, noColor bool) []byte {
 		dst = strconv.AppendInt(dst, int64(startCol+1), 10)
 		dst = append(dst, 'H')
 		dst = append(dst, "\x1b[0m"...)
-		if noColor {
-			dst = append(dst, "\x1b[7m"...)
-		} else {
-			dst = append(dst, "\x1b[40m\x1b[97m"...)
-		}
+		dst = append(dst, th.HelpStyle(noColor)...)
 		line = truncate(line, boxW)
 		dst = append(dst, line...)
 		dst = append(dst, strings.Repeat(" ", max(0, boxW-utf8.RuneCountInString(line)))...)

@@ -11,6 +11,7 @@ import (
 	"github.com/fs8280071-gif/player-tui/internal/cli"
 	"github.com/fs8280071-gif/player-tui/internal/config"
 	"github.com/fs8280071-gif/player-tui/internal/render"
+	"github.com/fs8280071-gif/player-tui/internal/theme"
 	xterm "golang.org/x/term"
 )
 
@@ -85,6 +86,15 @@ func run(args []string) int {
 		}
 		mode = parsed
 	}
+	themeName := cfg.Theme
+	if opts.Theme != "" {
+		themeName = opts.Theme
+	}
+	th, err := theme.Parse(themeName)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "player-tui: %v\n", err)
+		return 2
+	}
 	if err := app.Run(context.Background(), app.Options{
 		Spec:      opts.Spec,
 		Specs:     opts.Specs,
@@ -94,6 +104,7 @@ func run(args []string) int {
 		Volume:    cfg.Volume,
 		Resume:    cfg.Resume,
 		ConfigDir: filepath.Dir(cfgPath),
+		Theme:     th,
 	}); err != nil {
 		return reportError(err)
 	}

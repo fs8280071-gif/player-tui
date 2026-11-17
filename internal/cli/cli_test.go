@@ -175,3 +175,19 @@ func TestParseQueue(t *testing.T) {
 		t.Fatal("--title accepted with multiple targets")
 	}
 }
+
+func TestParseTheme(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "clip.mp4")
+	if err := os.WriteFile(path, []byte("x"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	opts, err := Parse([]string{"play", path, "--theme", "nord"})
+	if err != nil || opts.Theme != "nord" {
+		t.Fatalf("theme = %q, %v", opts.Theme, err)
+	}
+	opts, err = Parse([]string{"play", path, "--theme=gruvbox"})
+	if err != nil || opts.Theme != "gruvbox" {
+		t.Fatalf("theme equals = %q, %v", opts.Theme, err)
+	}
+}

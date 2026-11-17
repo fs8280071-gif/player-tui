@@ -32,6 +32,7 @@ type Options struct {
 	Cols    int
 	Rows    int
 	Audio   bool
+	Theme   string
 	Help    bool
 }
 
@@ -54,6 +55,7 @@ Usage:
 Options:
   --render <mode>       kitty, sixel, iterm2, halfblock, quadrant,
                         sextant, or auto (default: auto)
+  --theme <name>        catppuccin, gruvbox, nord, or high-contrast
   --dither              ordered 4x4 Bayer dithering
   --title <text>        display title (does not rename the source)
   --sub-file <path>     attach an external subtitle file
@@ -151,6 +153,14 @@ func Parse(args []string) (Options, error) {
 			opts.Dither = true
 		case arg == "--audio":
 			opts.Audio = true
+		case arg == "--theme":
+			if i+1 >= len(args) {
+				return opts, fmt.Errorf("%s needs a value", arg)
+			}
+			i++
+			opts.Theme = args[i]
+		case strings.HasPrefix(arg, "--theme="):
+			opts.Theme = strings.TrimPrefix(arg, "--theme=")
 		case strings.HasPrefix(arg, "--title="):
 			opts.Spec.Title = strings.TrimPrefix(arg, "--title=")
 		case strings.HasPrefix(arg, "--sub-file="):
