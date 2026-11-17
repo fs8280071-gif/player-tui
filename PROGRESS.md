@@ -102,6 +102,10 @@
   render FPS, and bytes per frame.
 - PTY-tested halfblock, quadrant, sextant, auto, and dither at 320x240 and
   1920x1088; all modes restored the terminal and exited cleanly.
+- PTY smoke-tested playback with a 10 s 720p clip: pause, seek, volume keys,
+  mute, speed, track cycling, help overlay, queue next/previous, and quit all
+  exited 0; every renderer emitted its expected marker and restored the
+  alternate screen. Status now shows `vol off` when audio is disabled.
 - Added a file browser: running `player-tui` with no arguments or
   `player-tui browse [dir]` lists directories and files with j/k, arrows, enter,
   h/backspace, `?`, and q; selecting a file starts playback.

@@ -198,17 +198,23 @@ func Run(ctx context.Context, opts Options) error {
 					}
 				}
 			case term.KeyVolumeUp:
-				if err := player.SetVolume(player.Volume() + 5); err != nil {
+				if !opts.Audio {
+					setNotice("audio is off (use --audio)")
+				} else if err := player.SetVolume(player.Volume() + 5); err != nil {
 					setNotice(err.Error())
 				}
 				statusDirty = true
 			case term.KeyVolumeDown:
-				if err := player.SetVolume(player.Volume() - 5); err != nil {
+				if !opts.Audio {
+					setNotice("audio is off (use --audio)")
+				} else if err := player.SetVolume(player.Volume() - 5); err != nil {
 					setNotice(err.Error())
 				}
 				statusDirty = true
 			case term.KeyMute:
-				if err := player.SetMuted(!player.Muted()); err != nil {
+				if !opts.Audio {
+					setNotice("audio is off (use --audio)")
+				} else if err := player.SetMuted(!player.Muted()); err != nil {
 					setNotice(err.Error())
 				}
 				statusDirty = true
@@ -318,7 +324,7 @@ func Run(ctx context.Context, opts Options) error {
 			if len(specs) > 1 {
 				title = fmt.Sprintf("[%d/%d] %s", index+1, len(specs), title)
 			}
-			statusBuf = buildStatus(statusBuf, title, snap, w, h, noColor, mode.String(), snap.Rate, notice, th)
+			statusBuf = buildStatus(statusBuf, title, snap, w, h, noColor, mode.String(), snap.Rate, notice, th, opts.Audio)
 			t.WriteString(string(statusBuf))
 		}
 		if helpVisible {
@@ -327,7 +333,7 @@ func Run(ctx context.Context, opts Options) error {
 	}
 }
 
-func buildStatus(dst []byte, title string, snap engine.Snapshot, width, height int, noColor bool, mode string, rate float64, notice string, th theme.Theme) []byte {
+func buildStatus(dst []byte, title string, snap engine.Snapshot, width, height int, noColor bool, mode string, rate float64, notice string, th theme.Theme, audioOn bool) []byte {
 	dst = dst[:0]
 	if width < 1 {
 		width = 1
@@ -336,7 +342,9 @@ func buildStatus(dst []byte, title string, snap engine.Snapshot, width, height i
 		height = 1
 	}
 	vol := fmt.Sprintf("%d%%", snap.Volume)
-	if snap.Muted {
+	if !audioOn {
+		vol = "off"
+	} else if snap.Muted {
 		vol = "muted"
 	}
 	rateText := ""
