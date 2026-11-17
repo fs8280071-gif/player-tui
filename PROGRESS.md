@@ -102,6 +102,9 @@
   render FPS, and bytes per frame.
 - PTY-tested halfblock, quadrant, sextant, auto, and dither at 320x240 and
   1920x1088; all modes restored the terminal and exited cleanly.
+- Added a file browser: running `player-tui` with no arguments or
+  `player-tui browse [dir]` lists directories and files with j/k, arrows, enter,
+  h/backspace, `?`, and q; selecting a file starts playback.
 - Added an escape sanitizer (`internal/sanitize`) with unit tests and a fuzz
   target; titles, notices, doctor values, and all CLI/app errors pass through it
   before reaching the terminal.

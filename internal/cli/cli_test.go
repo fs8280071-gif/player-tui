@@ -191,3 +191,22 @@ func TestParseTheme(t *testing.T) {
 		t.Fatalf("theme equals = %q, %v", opts.Theme, err)
 	}
 }
+
+func TestParseBrowse(t *testing.T) {
+	opts, err := Parse(nil)
+	if err != nil || opts.Command != CommandBrowse {
+		t.Fatalf("no-arg parse: %+v %v", opts, err)
+	}
+	dir := t.TempDir()
+	opts, err = Parse([]string{"browse", dir})
+	if err != nil || opts.Command != CommandBrowse || opts.BrowseDir == "" {
+		t.Fatalf("browse parse: %+v %v", opts, err)
+	}
+	file := filepath.Join(dir, "clip.mp4")
+	if err := os.WriteFile(file, []byte("x"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Parse([]string{"browse", file}); err == nil {
+		t.Fatal("browse accepted a file")
+	}
+}

@@ -63,6 +63,13 @@ func (t Theme) StatusStyle(noColor bool) string {
 	return fgBg(t.Fg, t.Bg)
 }
 
+func (t Theme) AccentStyle(noColor bool) string {
+	if noColor {
+		return "\x1b[1m"
+	}
+	return "\x1b[1m\x1b[38;2;" + rgb(t.Accent) + "m"
+}
+
 func (t Theme) HelpStyle(noColor bool) string {
 	if noColor {
 		return "\x1b[7m"

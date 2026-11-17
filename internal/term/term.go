@@ -31,6 +31,9 @@ const (
 	KeySubtitle
 	KeyAudio
 	KeyHelp
+	KeyEnter
+	KeyBackspace
+	KeyBack
 )
 
 type Terminal struct {
@@ -108,6 +111,16 @@ func (t *Terminal) ReadKeys(ctx context.Context, out chan<- Key) {
 			k = KeyAudio
 		case '?':
 			k = KeyHelp
+		case '\r', '\n':
+			k = KeyEnter
+		case 0x7f, 0x08:
+			k = KeyBackspace
+		case 'h', 'H':
+			k = KeyBack
+		case 'j', 'J':
+			k = KeyDown
+		case 'k', 'K':
+			k = KeyUp
 		case 0x1b:
 			k = readEscape(r)
 		default:

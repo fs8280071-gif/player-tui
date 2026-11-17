@@ -20,20 +20,22 @@ const (
 	CommandPlay Command = iota
 	CommandBench
 	CommandDoctor
+	CommandBrowse
 )
 
 type Options struct {
-	Command Command
-	Spec    engine.MediaSpec
-	Specs   []engine.MediaSpec
-	Render  render.Mode
-	Dither  bool
-	Frames  int
-	Cols    int
-	Rows    int
-	Audio   bool
-	Theme   string
-	Help    bool
+	Command   Command
+	Spec      engine.MediaSpec
+	Specs     []engine.MediaSpec
+	Render    render.Mode
+	Dither    bool
+	Frames    int
+	Cols      int
+	Rows      int
+	Audio     bool
+	Theme     string
+	BrowseDir string
+	Help      bool
 }
 
 type TargetError struct {
@@ -46,6 +48,8 @@ func (e *TargetError) Unwrap() error { return e.Err }
 const Usage = `player-tui - play media in the terminal
 
 Usage:
+  player-tui                       open the file browser
+  player-tui browse [directory]    open the file browser in a directory
   player-tui play <file-or-url> [file-or-url ...] [options]
   player-tui open <file-or-url> [options]
   player-tui <file-or-url> [options]
@@ -66,7 +70,7 @@ Options:
   --rows <n>            bench: terminal height in cells (default 40)
   -h, --help            show this help
 
-Keys:
+Keys (playback):
   space                 play / pause
   left / right          seek -5s / +5s
   + / -                 volume +/- 5%
@@ -76,12 +80,20 @@ Keys:
   n / p                 next / previous file
   ?                     help overlay
   q                     quit
+
+Keys (browser):
+  j / down, k / up      move selection
+  enter                 open file or directory
+  h / backspace         parent directory
+  ?                     help overlay
+  q                     quit
 `
 
 func Parse(args []string) (Options, error) {
 	opts := Options{Render: render.ModeAuto, Cols: 120, Rows: 40}
 	if len(args) == 0 {
-		return opts, errors.New("missing media target (or run: player-tui)")
+		opts.Command = CommandBrowse
+		return opts, nil
 	}
 	if args[0] == "doctor" {
 		opts.Command = CommandDoctor
@@ -209,7 +221,23 @@ func Parse(args []string) (Options, error) {
 		case "bench":
 			opts.Command = CommandBench
 			positionals = positionals[1:]
+		case "browse":
+			opts.Command = CommandBrowse
+			positionals = positionals[1:]
 		}
+	}
+	if opts.Command == CommandBrowse {
+		if len(positionals) > 1 {
+			return opts, fmt.Errorf("browse accepts at most one directory (got %d)", len(positionals))
+		}
+		if len(positionals) == 1 {
+			dir, err := normalizeDir(positionals[0])
+			if err != nil {
+				return opts, err
+			}
+			opts.BrowseDir = dir
+		}
+		return opts, nil
 	}
 	if len(positionals) == 0 {
 		return opts, errors.New("missing media target")
@@ -257,6 +285,29 @@ func parseCount(name, value string, minValue int) (int, error) {
 		return 0, fmt.Errorf("%s needs an integer >= %d", name, minValue)
 	}
 	return n, nil
+}
+
+func normalizeDir(dir string) (string, error) {
+	if strings.TrimSpace(dir) == "" {
+		return "", &TargetError{Err: errors.New("empty directory")}
+	}
+	for _, r := range dir {
+		if r == 0 || (r < 0x20 && r != '\t') || r == 0x7f {
+			return "", &TargetError{Err: errors.New("directory contains control characters")}
+		}
+	}
+	abs, err := filepath.Abs(dir)
+	if err != nil {
+		return "", err
+	}
+	info, err := os.Stat(abs)
+	if err != nil {
+		return "", &TargetError{Err: fmt.Errorf("cannot read %q: %w", dir, err)}
+	}
+	if !info.IsDir() {
+		return "", &TargetError{Err: fmt.Errorf("%q is not a directory", dir)}
+	}
+	return abs, nil
 }
 
 func normalizeTarget(target string) (string, error) {

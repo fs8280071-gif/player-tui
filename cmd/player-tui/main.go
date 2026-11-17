@@ -10,6 +10,7 @@ import (
 	"github.com/fs8280071-gif/player-tui/internal/app"
 	"github.com/fs8280071-gif/player-tui/internal/cli"
 	"github.com/fs8280071-gif/player-tui/internal/config"
+	"github.com/fs8280071-gif/player-tui/internal/engine"
 	"github.com/fs8280071-gif/player-tui/internal/render"
 	"github.com/fs8280071-gif/player-tui/internal/sanitize"
 	"github.com/fs8280071-gif/player-tui/internal/theme"
@@ -96,6 +97,28 @@ func run(args []string) int {
 		fmt.Fprintf(os.Stderr, "player-tui: %s\n", sanitize.Text(err.Error()))
 		return 2
 	}
+	if opts.Command == cli.CommandBrowse {
+		path, err := app.Browse(context.Background(), app.BrowseOptions{
+			StartDir: opts.BrowseDir,
+			Theme:    th,
+			NoColor:  os.Getenv("NO_COLOR") != "",
+		})
+		if err != nil {
+			return reportError(err)
+		}
+		if path == "" {
+			return 0
+		}
+		abs, err := filepath.Abs(path)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "player-tui: %s\n", sanitize.Text(err.Error()))
+			return 3
+		}
+		spec := engine.MediaSpec{Target: abs, Title: app.SelectedTitle(abs)}
+		opts.Spec = spec
+		opts.Specs = []engine.MediaSpec{spec}
+	}
+
 	if err := app.Run(context.Background(), app.Options{
 		Spec:      opts.Spec,
 		Specs:     opts.Specs,
