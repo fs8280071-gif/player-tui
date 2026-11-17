@@ -71,6 +71,7 @@ func run(args []string) int {
 		Spec:   opts.Spec,
 		Render: opts.Render,
 		Dither: opts.Dither,
+		Audio:  opts.Audio,
 	}); err != nil {
 		return reportError(err)
 	}

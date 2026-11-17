@@ -87,6 +87,10 @@ func TestParseRenderOptions(t *testing.T) {
 	if opts.Frames != 30 || opts.Cols != 80 || opts.Rows != 24 {
 		t.Fatalf("bench options = %+v", opts)
 	}
+	opts, err = Parse([]string{"play", path, "--audio"})
+	if err != nil || !opts.Audio {
+		t.Fatalf("audio flag: %+v %v", opts, err)
+	}
 }
 
 func TestParseRenderEquals(t *testing.T) {

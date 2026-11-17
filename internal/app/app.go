@@ -29,11 +29,12 @@ type Options struct {
 	Spec   engine.MediaSpec
 	Render render.Mode
 	Dither bool
+	Audio  bool
 }
 
 func Run(ctx context.Context, opts Options) error {
 	spec := opts.Spec
-	player, err := libvlc.New()
+	player, err := libvlc.New(opts.Audio)
 	if err != nil {
 		return &Error{Code: 4, Err: err}
 	}

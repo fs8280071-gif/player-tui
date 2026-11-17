@@ -49,7 +49,7 @@ func Bench(ctx context.Context, opts BenchOptions) (BenchStats, error) {
 	}
 	_ = os.Setenv("PLAYER_TUI_DUMMY_AUDIO", "1")
 
-	player, err := libvlc.New()
+	player, err := libvlc.New(false)
 	if err != nil {
 		return BenchStats{}, &Error{Code: 4, Err: err}
 	}

@@ -30,6 +30,7 @@ type Options struct {
 	Frames  int
 	Cols    int
 	Rows    int
+	Audio   bool
 	Help    bool
 }
 
@@ -56,6 +57,7 @@ Options:
   --title <text>        display title (does not rename the source)
   --sub-file <path>     attach an external subtitle file
   --start <time>        start position: SS, MM:SS, or HH:MM:SS
+  --audio               enable audio output (default: off)
   --frames <n>          bench: stop after n frames (0 = until end)
   --cols <n>            bench: terminal width in cells (default 120)
   --rows <n>            bench: terminal height in cells (default 40)
@@ -140,6 +142,8 @@ func Parse(args []string) (Options, error) {
 			}
 		case arg == "--dither":
 			opts.Dither = true
+		case arg == "--audio":
+			opts.Audio = true
 		case strings.HasPrefix(arg, "--title="):
 			opts.Spec.Title = strings.TrimPrefix(arg, "--title=")
 		case strings.HasPrefix(arg, "--sub-file="):

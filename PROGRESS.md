@@ -102,6 +102,9 @@
   render FPS, and bytes per frame.
 - PTY-tested halfblock, quadrant, sextant, auto, and dither at 320x240 and
   1920x1088; all modes restored the terminal and exited cleanly.
+- Added `--audio` (default off; libVLC uses a dummy output unless enabled) and
+  `docs/AUDIO-SETUP.md` with Termux-side and Debian-side PulseAudio-over-TCP
+  commands. Termux-side commands were documented only, never executed.
 - Added a `doctor` command (terminal size, TERM/COLORTERM/TERM_PROGRAM,
   graphics/truecolor detection, chosen render mode, fallbacks), volume and mute
   fields in the status snapshot, percentage in the status row, and explicit

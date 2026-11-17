@@ -36,9 +36,9 @@ type Player struct {
 	paddedH  int
 }
 
-func New() (*Player, error) {
+func New(audio bool) (*Player, error) {
 	var args []string
-	if os.Getenv("PLAYER_TUI_DUMMY_AUDIO") == "1" {
+	if !audio || os.Getenv("PLAYER_TUI_DUMMY_AUDIO") == "1" {
 		args = append(args, "--aout=dummy")
 	}
 	if os.Getenv("PLAYER_TUI_VLC_VERBOSE") != "1" {
