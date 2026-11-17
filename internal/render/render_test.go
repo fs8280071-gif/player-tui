@@ -139,7 +139,15 @@ func TestParseMode(t *testing.T) {
 			t.Errorf("ParseMode(%q) = %v, %v; want %v", name, got, err, want)
 		}
 	}
-	if _, err := ParseMode("kitty"); err == nil {
+	for name, want := range map[string]Mode{
+		"kitty": ModeKitty, "sixel": ModeSixel, "iterm2": ModeITerm2,
+	} {
+		got, err := ParseMode(name)
+		if err != nil || got != want {
+			t.Errorf("ParseMode(%q) = %v, %v; want %v", name, got, err, want)
+		}
+	}
+	if _, err := ParseMode("bogus"); err == nil {
 		t.Fatal("invalid mode accepted")
 	}
 }
@@ -191,5 +199,31 @@ func TestResolve(t *testing.T) {
 	mode, source = Resolve(ModeAuto)
 	if mode != ModeQuadrant || source != "auto" {
 		t.Fatalf("Resolve invalid env = %v, %q", mode, source)
+	}
+}
+
+func TestGraphicsModes(t *testing.T) {
+	f := uniformFrame(8, 12, 100)
+	for _, tc := range []struct {
+		mode   Mode
+		prefix []byte
+	}{
+		{ModeKitty, []byte("\x1b_Ga=T")},
+		{ModeSixel, []byte("\x1bPq")},
+		{ModeITerm2, []byte("\x1b]1337;File=")},
+	} {
+		r := New(tc.mode, false)
+		out := r.Append(nil, f, 4, 2, 1, 1)
+		if !bytes.Contains(out, tc.prefix) {
+			t.Errorf("%s output missing %q", tc.mode, tc.prefix)
+		}
+		if !bytes.Contains(out, []byte("\x1b[1;1H")) {
+			t.Errorf("%s output missing cursor placement", tc.mode)
+		}
+	}
+	r := New(ModeKitty, false)
+	r.Append(nil, f, 4, 2, 1, 1)
+	if !bytes.Contains(r.Cleanup(), []byte("a=d,d=I")) {
+		t.Fatal("kitty cleanup missing delete")
 	}
 }

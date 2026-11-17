@@ -101,7 +101,11 @@ func TestParseRenderEquals(t *testing.T) {
 	if opts.Render != 3 {
 		t.Fatalf("render = %v", opts.Render)
 	}
-	if _, err := Parse([]string{"play", path, "--render", "kitty"}); err == nil {
+	opts, err = Parse([]string{"play", path, "--render", "kitty"})
+	if err != nil || opts.Render.String() != "kitty" {
+		t.Fatalf("kitty render: %v %v", opts.Render, err)
+	}
+	if _, err := Parse([]string{"play", path, "--render", "bogus"}); err == nil {
 		t.Fatal("invalid render mode accepted")
 	}
 }

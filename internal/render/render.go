@@ -8,6 +8,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/fs8280071-gif/player-tui/internal/render/kitty"
 	"github.com/fs8280071-gif/player-tui/internal/video"
 )
 
@@ -18,6 +19,9 @@ const (
 	ModeHalfblock
 	ModeQuadrant
 	ModeSextant
+	ModeKitty
+	ModeSixel
+	ModeITerm2
 )
 
 func (m Mode) String() string {
@@ -30,9 +34,19 @@ func (m Mode) String() string {
 		return "quadrant"
 	case ModeSextant:
 		return "sextant"
+	case ModeKitty:
+		return "kitty"
+	case ModeSixel:
+		return "sixel"
+	case ModeITerm2:
+		return "iterm2"
 	default:
 		return "unknown"
 	}
+}
+
+func (m Mode) Graphics() bool {
+	return m == ModeKitty || m == ModeSixel || m == ModeITerm2
 }
 
 func ParseMode(name string) (Mode, error) {
@@ -45,8 +59,14 @@ func ParseMode(name string) (Mode, error) {
 		return ModeQuadrant, nil
 	case "sextant", "sext", "2x3":
 		return ModeSextant, nil
+	case "kitty":
+		return ModeKitty, nil
+	case "sixel":
+		return ModeSixel, nil
+	case "iterm2", "iterm":
+		return ModeITerm2, nil
 	default:
-		return ModeAuto, fmt.Errorf("unknown render mode %q (use halfblock, quadrant, sextant, or auto)", name)
+		return ModeAuto, fmt.Errorf("unknown render mode %q (use kitty, sixel, iterm2, halfblock, quadrant, sextant, or auto)", name)
 	}
 }
 
@@ -70,7 +90,7 @@ func AutoMode(getenv func(string) string) Mode {
 	if strings.EqualFold(getenv("PLAYER_TUI_ASCII"), "1") {
 		return ModeHalfblock
 	}
-	return ModeQuadrant
+	return Detect(getenv).PreferredMode()
 }
 
 func (m Mode) pixelsPerCell() (int, int) {
@@ -141,21 +161,33 @@ type Renderer struct {
 	lastFg    int32
 	lastBg    int32
 	sampleBuf [6]rgb
+	imageID   uint32
+	frames    uint64
 }
 
 func New(mode Mode, dither bool) *Renderer {
 	if mode == ModeAuto {
 		mode, _ = Resolve(ModeAuto)
 	}
-	return &Renderer{mode: mode, dither: dither, lastFg: -1, lastBg: -1}
+	return &Renderer{mode: mode, dither: dither, lastFg: -1, lastBg: -1, imageID: 1001}
 }
 
 func (r *Renderer) Mode() Mode { return r.mode }
+
+func (r *Renderer) Cleanup() []byte {
+	if r.mode == ModeKitty && r.frames > 0 {
+		return kitty.Delete(nil, r.imageID)
+	}
+	return nil
+}
 
 func (r *Renderer) Append(dst []byte, f *video.Frame, cols, rows, startRow, startCol int) []byte {
 	dst = dst[:0]
 	if f == nil || f.Width <= 0 || f.Height <= 0 || cols <= 0 || rows <= 0 {
 		return dst
+	}
+	if r.mode.Graphics() {
+		return r.appendGraphics(dst, f, cols, rows, startRow, startCol)
 	}
 	r.lastFg, r.lastBg = -1, -1
 	pxW, pxH := r.mode.pixelsPerCell()

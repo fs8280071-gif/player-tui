@@ -48,7 +48,8 @@ Usage:
   player-tui bench <file-or-url> [options]
 
 Options:
-  --render <mode>       halfblock, quadrant, sextant, or auto (default: auto)
+  --render <mode>       kitty, sixel, iterm2, halfblock, quadrant,
+                        sextant, or auto (default: auto)
   --dither              ordered 4x4 Bayer dithering
   --title <text>        display title (does not rename the source)
   --sub-file <path>     attach an external subtitle file

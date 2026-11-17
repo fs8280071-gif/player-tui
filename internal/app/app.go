@@ -60,6 +60,11 @@ func Run(ctx context.Context, opts Options) error {
 
 	mode, _ := render.Resolve(opts.Render)
 	renderer := render.New(mode, opts.Dither)
+	defer func() {
+		if seq := renderer.Cleanup(); len(seq) > 0 {
+			t.WriteString(string(seq))
+		}
+	}()
 	noColor := os.Getenv("NO_COLOR") != ""
 
 	var frameBuf, statusBuf []byte

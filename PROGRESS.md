@@ -102,6 +102,12 @@
   render FPS, and bytes per frame.
 - PTY-tested halfblock, quadrant, sextant, auto, and dither at 320x240 and
   1920x1088; all modes restored the terminal and exited cleanly.
+- Added Kitty, Sixel, and iTerm2 encoders as separate packages
+  (`internal/render/{kitty,sixel,iterm2}`) with unit tests against fixed byte
+  sequences, `--render kitty|sixel|iterm2`, and auto-detection from
+  `KITTY_WINDOW_ID`, `TERM`, `TERM_PROGRAM`, and `COLORTERM`.
+  **Encoders are unit-tested only; not yet tested on a real Kitty, Sixel, or
+  iTerm2 terminal.**
 
 ## Benchmark summary
 
@@ -123,9 +129,9 @@
 
 ## Next
 
-- Continue the MVP: capability detection and `doctor`, frame scheduler/drop
-  metrics, external subtitle cues, queue/playlists, and the Vaxis pane UI.
-  Then Kitty/Sixel encoders and cleanup tests.
+- Continue the MVP: `doctor`, frame scheduler/drop metrics, external subtitle
+  cues, queue/playlists, and the Vaxis pane UI. Validate graphics encoders on
+  real terminals.
 - Renderer follow-ups: automatic font/tofu probing where possible, a
   low-bandwidth mode, and a summed-area-table path if 1080p60 becomes a target.
 - AI v1 follows MVP: offline ASR, VAD, batch jobs, model manager, privacy/wipe,
