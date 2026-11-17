@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/fs8280071-gif/player-tui/internal/render"
+	"github.com/fs8280071-gif/player-tui/internal/sanitize"
 )
 
 type DoctorOptions struct {
@@ -47,6 +48,7 @@ func Doctor(getenv func(string) string, opts DoctorOptions) string {
 }
 
 func valueOr(s, fallback string) string {
+	s = sanitize.Text(s)
 	if strings.TrimSpace(s) == "" {
 		return fallback
 	}

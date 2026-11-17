@@ -11,6 +11,7 @@ import (
 	"github.com/fs8280071-gif/player-tui/internal/cli"
 	"github.com/fs8280071-gif/player-tui/internal/config"
 	"github.com/fs8280071-gif/player-tui/internal/render"
+	"github.com/fs8280071-gif/player-tui/internal/sanitize"
 	"github.com/fs8280071-gif/player-tui/internal/theme"
 	xterm "golang.org/x/term"
 )
@@ -22,7 +23,7 @@ func main() {
 func run(args []string) int {
 	opts, err := cli.Parse(args)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "player-tui: %v\n", err)
+		fmt.Fprintf(os.Stderr, "player-tui: %s\n", sanitize.Text(err.Error()))
 		var targetErr *cli.TargetError
 		if errors.As(err, &targetErr) {
 			return 3
@@ -74,14 +75,14 @@ func run(args []string) int {
 	cfgPath := config.DefaultPath()
 	cfg, err := config.Load(cfgPath)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "player-tui: config: %v\n", err)
+		fmt.Fprintf(os.Stderr, "player-tui: config: %s\n", sanitize.Text(err.Error()))
 		return 2
 	}
 	mode := opts.Render
 	if mode == render.ModeAuto && cfg.Render != "" && cfg.Render != "auto" {
 		parsed, err := render.ParseMode(cfg.Render)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "player-tui: config: %v\n", err)
+			fmt.Fprintf(os.Stderr, "player-tui: config: %s\n", sanitize.Text(err.Error()))
 			return 2
 		}
 		mode = parsed
@@ -92,7 +93,7 @@ func run(args []string) int {
 	}
 	th, err := theme.Parse(themeName)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "player-tui: %v\n", err)
+		fmt.Fprintf(os.Stderr, "player-tui: %s\n", sanitize.Text(err.Error()))
 		return 2
 	}
 	if err := app.Run(context.Background(), app.Options{
@@ -112,7 +113,7 @@ func run(args []string) int {
 }
 
 func reportError(err error) int {
-	fmt.Fprintf(os.Stderr, "player-tui: %v\n", err)
+	fmt.Fprintf(os.Stderr, "player-tui: %s\n", sanitize.Text(err.Error()))
 	var exitErr *app.Error
 	if errors.As(err, &exitErr) {
 		return exitErr.Code

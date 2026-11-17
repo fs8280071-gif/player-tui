@@ -102,6 +102,9 @@
   render FPS, and bytes per frame.
 - PTY-tested halfblock, quadrant, sextant, auto, and dither at 320x240 and
   1920x1088; all modes restored the terminal and exited cleanly.
+- Added an escape sanitizer (`internal/sanitize`) with unit tests and a fuzz
+  target; titles, notices, doctor values, and all CLI/app errors pass through it
+  before reaching the terminal.
 - Added Catppuccin, Gruvbox, Nord, and high-contrast themes (`--theme` or the
   config file), with `NO_COLOR` forcing reverse-video instead of palette colors.
 - Added a TOML config (`~/.config/player-tui/config.toml`, override with

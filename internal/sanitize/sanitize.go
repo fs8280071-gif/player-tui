@@ -13,11 +13,10 @@ func Text(s string) string {
 	b.Grow(len(s))
 	n := 0
 	for _, r := range s {
-		if isUnsafe(r) {
-			continue
-		}
 		if r == '\t' {
 			r = ' '
+		} else if isUnsafe(r) {
+			continue
 		}
 		if n >= maxRunes {
 			break

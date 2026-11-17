@@ -311,7 +311,10 @@ func Run(ctx context.Context, opts Options) error {
 		}
 		if statusDirty {
 			statusDirty = false
-			title := spec.Title
+			title := sanitize.Text(spec.Title)
+			if title == "" {
+				title = "player-tui"
+			}
 			if len(specs) > 1 {
 				title = fmt.Sprintf("[%d/%d] %s", index+1, len(specs), title)
 			}
