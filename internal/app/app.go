@@ -5,12 +5,14 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"syscall"
 	"time"
 	"unicode/utf8"
 
+	"github.com/fs8280071-gif/player-tui/internal/config"
 	"github.com/fs8280071-gif/player-tui/internal/engine"
 	"github.com/fs8280071-gif/player-tui/internal/engine/libvlc"
 	"github.com/fs8280071-gif/player-tui/internal/render"
@@ -28,11 +30,14 @@ func (e *Error) Error() string { return e.Err.Error() }
 func (e *Error) Unwrap() error { return e.Err }
 
 type Options struct {
-	Spec   engine.MediaSpec
-	Specs  []engine.MediaSpec
-	Render render.Mode
-	Dither bool
-	Audio  bool
+	Spec      engine.MediaSpec
+	Specs     []engine.MediaSpec
+	Render    render.Mode
+	Dither    bool
+	Audio     bool
+	Volume    int
+	Resume    bool
+	ConfigDir string
 }
 
 func Run(ctx context.Context, opts Options) error {
@@ -57,13 +62,47 @@ func Run(ctx context.Context, opts Options) error {
 	if err := player.Open(ctx, spec); err != nil {
 		return &Error{Code: 3, Err: err}
 	}
+	if opts.Volume > 0 {
+		_ = player.SetVolume(opts.Volume)
+	}
+
+	var store *config.Store
+	if opts.Resume && opts.ConfigDir != "" {
+		store = config.NewStore(filepath.Join(opts.ConfigDir, "resume.json"))
+	}
+	resumePoint := func(s engine.MediaSpec) time.Duration {
+		if store == nil || s.Start > 0 {
+			return 0
+		}
+		if pos := store.Position(s.Target); pos >= 5*time.Second {
+			return pos
+		}
+		return 0
+	}
+	pendingStart := spec.Start
+	if pendingStart == 0 {
+		pendingStart = resumePoint(spec)
+	}
+	savePosition := func() {
+		if store == nil {
+			return
+		}
+		snap := player.Snapshot()
+		if snap.Duration > 0 && snap.Time > snap.Duration-3*time.Second {
+			store.Forget(spec.Target)
+		} else {
+			store.Set(spec.Target, snap.Time)
+		}
+		_ = store.Save()
+	}
+	defer savePosition()
 
 	runCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	keys := make(chan term.Key, 16)
 	go t.ReadKeys(runCtx, keys)
 
-	startApplied := spec.Start <= 0
+	startApplied := pendingStart <= 0
 	startWait := time.Now()
 	var frameBuf, statusBuf []byte
 	var lastFrame *video.Frame
@@ -74,12 +113,20 @@ func Run(ctx context.Context, opts Options) error {
 		if i < 0 || i >= len(specs) {
 			return nil
 		}
+		savePosition()
 		if err := player.Open(runCtx, specs[i]); err != nil {
 			return &Error{Code: 3, Err: err}
 		}
+		if opts.Volume > 0 {
+			_ = player.SetVolume(opts.Volume)
+		}
 		index = i
 		spec = specs[i]
-		startApplied = spec.Start <= 0
+		pendingStart = spec.Start
+		if pendingStart == 0 {
+			pendingStart = resumePoint(spec)
+		}
+		startApplied = pendingStart <= 0
 		startWait = time.Now()
 		lastFrame = nil
 		lastState = engine.StateIdle
@@ -211,7 +258,13 @@ func Run(ctx context.Context, opts Options) error {
 
 		if !startApplied && snap.State == engine.StatePlaying {
 			if snap.Seekable {
-				if err := player.Seek(spec.Start); err == nil {
+				nearEnd := snap.Duration > 0 && pendingStart >= snap.Duration-2*time.Second
+				if nearEnd {
+					startApplied = true
+					if store != nil {
+						store.Forget(spec.Target)
+					}
+				} else if err := player.Seek(pendingStart); err == nil {
 					startApplied = true
 				}
 			} else if time.Since(startWait) > 2*time.Second {

@@ -5,9 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/fs8280071-gif/player-tui/internal/app"
 	"github.com/fs8280071-gif/player-tui/internal/cli"
+	"github.com/fs8280071-gif/player-tui/internal/config"
+	"github.com/fs8280071-gif/player-tui/internal/render"
 	xterm "golang.org/x/term"
 )
 
@@ -67,12 +70,30 @@ func run(args []string) int {
 		return 0
 	}
 
+	cfgPath := config.DefaultPath()
+	cfg, err := config.Load(cfgPath)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "player-tui: config: %v\n", err)
+		return 2
+	}
+	mode := opts.Render
+	if mode == render.ModeAuto && cfg.Render != "" && cfg.Render != "auto" {
+		parsed, err := render.ParseMode(cfg.Render)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "player-tui: config: %v\n", err)
+			return 2
+		}
+		mode = parsed
+	}
 	if err := app.Run(context.Background(), app.Options{
-		Spec:   opts.Spec,
-		Specs:  opts.Specs,
-		Render: opts.Render,
-		Dither: opts.Dither,
-		Audio:  opts.Audio,
+		Spec:      opts.Spec,
+		Specs:     opts.Specs,
+		Render:    mode,
+		Dither:    opts.Dither || cfg.Dither,
+		Audio:     opts.Audio || cfg.Audio,
+		Volume:    cfg.Volume,
+		Resume:    cfg.Resume,
+		ConfigDir: filepath.Dir(cfgPath),
 	}); err != nil {
 		return reportError(err)
 	}
