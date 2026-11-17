@@ -66,3 +66,42 @@ func TestParseHelp(t *testing.T) {
 		t.Fatalf("help: %v %v", opts.Help, err)
 	}
 }
+
+func TestParseRenderOptions(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "clip.mp4")
+	if err := os.WriteFile(path, []byte("x"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	opts, err := Parse([]string{"bench", path, "--render", "quadrant", "--dither", "--frames", "30", "--cols", "80", "--rows", "24"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if opts.Command != CommandBench {
+		t.Fatalf("command = %v", opts.Command)
+	}
+	if opts.Render.String() != "quadrant" || !opts.Dither {
+		t.Fatalf("render = %v dither = %v", opts.Render, opts.Dither)
+	}
+	if opts.Frames != 30 || opts.Cols != 80 || opts.Rows != 24 {
+		t.Fatalf("bench options = %+v", opts)
+	}
+}
+
+func TestParseRenderEquals(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "clip.mp4")
+	if err := os.WriteFile(path, []byte("x"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	opts, err := Parse([]string{"play", path, "--render=sextant"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if opts.Render != 3 {
+		t.Fatalf("render = %v", opts.Render)
+	}
+	if _, err := Parse([]string{"play", path, "--render", "kitty"}); err == nil {
+		t.Fatal("invalid render mode accepted")
+	}
+}

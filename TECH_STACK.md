@@ -13,7 +13,7 @@ system design and `PROGRESS.md` for benchmark evidence.
 | Video path | I420 callback -> YUV sampling in Go -> terminal | Benchmarked best path: 33-41 fps at 1080p display-only; no full RGBA intermediate. | Callback copy and per-cell sampling cost CPU. |
 | Terminal (MVP slice) | `golang.org/x/term` + direct ANSI compositor | Smallest runnable slice; raw mode, alternate screen, input, resize. | Not a full widget toolkit; panes/palette arrive with the Vaxis layer. |
 | TUI target | Vaxis (`github.com/rockorager/vaxis`) | Cell grid, Unicode width, key parsing, resize; active project, MIT. | Raw graphics output needs a compositor spike; text panes land after the primitives. |
-| Half-block | Custom truecolor renderer | Two vertical pixels per `▀`; trivially portable; works over SSH. | High output volume; needs frame dropping and a low-bandwidth mode. |
+| Block modes | Custom truecolor renderer | Halfblock (1x2, `▀`), quadrant (2x2), and sextant (2x3) samples per cell; exact area averaging; portable and works over SSH. | High output volume, especially with dither; needs frame dropping and a low-bandwidth mode. |
 | Kitty/Sixel | Custom encoders (later) | No runtime dependency; control over chunking and cleanup. | Larger test matrix; protocol edge cases. |
 | Subtitles | `asticode/go-astisub` for SRT/VTT; custom ASS text | Mature parsers; styling approximated in cells. | Bitmap subtitles remain libVLC's job. |
 | Library (V1) | `modernc.org/sqlite` + FTS5 | Pure Go, no CGO or system SQLite dependency. | Slightly slower than C SQLite; acceptable at 1k-100k items. |

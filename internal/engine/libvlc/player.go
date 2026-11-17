@@ -29,6 +29,11 @@ type Player struct {
 	mu      sync.Mutex
 	lastSeq uint64
 	frame   video.Frame
+
+	visibleW int
+	visibleH int
+	paddedW  int
+	paddedH  int
 }
 
 func New() (*Player, error) {
@@ -115,6 +120,8 @@ func (p *Player) Open(_ context.Context, spec engine.MediaSpec) error {
 	p.ctx = ctx
 	p.lastSeq = 0
 	p.frame = video.Frame{}
+	p.visibleW, p.visibleH = 0, 0
+	p.paddedW, p.paddedH = 0, 0
 
 	if C.libvlc_media_player_play(mp) != 0 {
 		p.closeLocked()
@@ -238,21 +245,38 @@ func (p *Player) LatestFrame() *video.Frame {
 	if base == nil || w == 0 || h == 0 {
 		return nil
 	}
-	width, height := int(w), int(h)
+	fullW, fullH := int(w), int(h)
+	if p.paddedW != fullW || p.paddedH != fullH {
+		p.visibleW, p.visibleH = 0, 0
+		p.paddedW, p.paddedH = fullW, fullH
+	}
+	width, height := fullW, fullH
+	if p.visibleW == 0 || p.visibleH == 0 {
+		var vw, vh C.uint
+		if C.libvlc_video_get_size(p.mp, 0, &vw, &vh) == 0 && vw > 0 && vh > 0 {
+			p.visibleW, p.visibleH = int(vw), int(vh)
+		}
+	}
+	if p.visibleW > 0 && p.visibleW < width {
+		width = p.visibleW
+	}
+	if p.visibleH > 0 && p.visibleH < height {
+		height = p.visibleH
+	}
 	py, pu, pv := int(pitchY), int(pitchU), int(pitchV)
-	ySize := py * height
-	uvHeight := (height + 1) / 2
+	ySize := py * fullH
+	uvHeight := (fullH + 1) / 2
 	uSize := pu * uvHeight
 	vSize := pv * uvHeight
 
 	ensureLen(&p.frame.Y, ySize)
 	ensureLen(&p.frame.U, uSize)
 	ensureLen(&p.frame.V, vSize)
-	copyPlane(p.frame.Y, base, py, width, height)
+	copyPlane(p.frame.Y, base, py, fullW, fullH)
 	uBase := unsafe.Add(unsafe.Pointer(base), ySize)
 	vBase := unsafe.Add(uBase, uSize)
-	copyPlane(p.frame.U, (*C.uint8_t)(uBase), pu, (width+1)/2, uvHeight)
-	copyPlane(p.frame.V, (*C.uint8_t)(vBase), pv, (width+1)/2, uvHeight)
+	copyPlane(p.frame.U, (*C.uint8_t)(uBase), pu, (fullW+1)/2, uvHeight)
+	copyPlane(p.frame.V, (*C.uint8_t)(vBase), pv, (fullW+1)/2, uvHeight)
 
 	p.frame.Width = width
 	p.frame.Height = height
@@ -291,6 +315,8 @@ func (p *Player) closeLocked() {
 		p.ctx = nil
 	}
 	p.lastSeq = 0
+	p.visibleW, p.visibleH = 0, 0
+	p.paddedW, p.paddedH = 0, 0
 }
 
 func (p *Player) stateLocked() engine.State {

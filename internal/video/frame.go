@@ -47,7 +47,6 @@ func (f *Frame) sample(x, y int) (float64, float64, float64) {
 	return yy, u, v
 }
 
-// AverageYUV box-samples the source rectangle [x0,x1) x [y0,y1).
 func (f *Frame) AverageYUV(x0, y0, x1, y1 int) (float64, float64, float64) {
 	if !f.ok() {
 		return 16, 128, 128
@@ -70,22 +69,43 @@ func (f *Frame) AverageYUV(x0, y0, x1, y1 int) (float64, float64, float64) {
 	if y1 > f.Height {
 		y1 = f.Height
 	}
-	sx := max(1, (x1-x0)/3)
-	sy := max(1, (y1-y0)/3)
-	var sumY, sumU, sumV, n float64
-	for y := y0; y < y1; y += sy {
-		for x := x0; x < x1; x += sx {
-			yy, u, v := f.sample(x, y)
-			sumY += yy
-			sumU += u
-			sumV += v
-			n++
+	var sumY, sumU, sumV uint64
+	var countY, countUV uint64
+	for y := y0; y < y1; y++ {
+		row := f.Y[y*f.StrideY:]
+		for x := x0; x < x1; x++ {
+			sumY += uint64(row[x])
+			countY++
 		}
 	}
-	if n == 0 {
+	if countY == 0 {
 		return f.sample((x0+x1)/2, (y0+y1)/2)
 	}
-	return sumY / n, sumU / n, sumV / n
+
+	uvW, uvH := (f.Width+1)/2, (f.Height+1)/2
+	cx0, cy0 := x0/2, y0/2
+	cx1, cy1 := (x1+1)/2, (y1+1)/2
+	if cx1 > uvW {
+		cx1 = uvW
+	}
+	if cy1 > uvH {
+		cy1 = uvH
+	}
+	for y := cy0; y < cy1; y++ {
+		uRow := f.U[y*f.StrideU:]
+		vRow := f.V[y*f.StrideV:]
+		for x := cx0; x < cx1; x++ {
+			sumU += uint64(uRow[x])
+			sumV += uint64(vRow[x])
+			countUV++
+		}
+	}
+	if countUV == 0 {
+		return float64(sumY) / float64(countY), 128, 128
+	}
+	return float64(sumY) / float64(countY),
+		float64(sumU) / float64(countUV),
+		float64(sumV) / float64(countUV)
 }
 
 func clamp8(v float64) uint8 {

@@ -11,11 +11,25 @@ import (
 	"unicode"
 
 	"github.com/fs8280071-gif/player-tui/internal/engine"
+	"github.com/fs8280071-gif/player-tui/internal/render"
+)
+
+type Command int
+
+const (
+	CommandPlay Command = iota
+	CommandBench
 )
 
 type Options struct {
-	Spec engine.MediaSpec
-	Help bool
+	Command Command
+	Spec    engine.MediaSpec
+	Render  render.Mode
+	Dither  bool
+	Frames  int
+	Cols    int
+	Rows    int
+	Help    bool
 }
 
 type TargetError struct {
@@ -31,11 +45,17 @@ Usage:
   player-tui play <file-or-url> [options]
   player-tui open <file-or-url> [options]
   player-tui <file-or-url> [options]
+  player-tui bench <file-or-url> [options]
 
 Options:
+  --render <mode>       halfblock, quadrant, sextant, or auto (default: auto)
+  --dither              ordered 4x4 Bayer dithering
   --title <text>        display title (does not rename the source)
   --sub-file <path>     attach an external subtitle file
   --start <time>        start position: SS, MM:SS, or HH:MM:SS
+  --frames <n>          bench: stop after n frames (0 = until end)
+  --cols <n>            bench: terminal width in cells (default 120)
+  --rows <n>            bench: terminal height in cells (default 40)
   -h, --help            show this help
 
 Keys:
@@ -45,7 +65,7 @@ Keys:
 `
 
 func Parse(args []string) (Options, error) {
-	var opts Options
+	opts := Options{Render: render.ModeAuto, Cols: 120, Rows: 40}
 	if len(args) == 0 {
 		return opts, errors.New("missing media target")
 	}
@@ -60,7 +80,8 @@ func Parse(args []string) (Options, error) {
 		case arg == "--":
 			positionals = append(positionals, args[i+1:]...)
 			i = len(args)
-		case arg == "--title" || arg == "--sub-file" || arg == "--start":
+		case arg == "--title" || arg == "--sub-file" || arg == "--start" ||
+			arg == "--render" || arg == "--frames" || arg == "--cols" || arg == "--rows":
 			if i+1 >= len(args) {
 				return opts, fmt.Errorf("%s needs a value", arg)
 			}
@@ -76,7 +97,33 @@ func Parse(args []string) (Options, error) {
 					return opts, err
 				}
 				opts.Spec.Start = d
+			case "--render":
+				mode, err := render.ParseMode(args[i])
+				if err != nil {
+					return opts, err
+				}
+				opts.Render = mode
+			case "--frames":
+				n, err := parseCount(arg, args[i], 0)
+				if err != nil {
+					return opts, err
+				}
+				opts.Frames = n
+			case "--cols":
+				n, err := parseCount(arg, args[i], 1)
+				if err != nil {
+					return opts, err
+				}
+				opts.Cols = n
+			case "--rows":
+				n, err := parseCount(arg, args[i], 1)
+				if err != nil {
+					return opts, err
+				}
+				opts.Rows = n
 			}
+		case arg == "--dither":
+			opts.Dither = true
 		case strings.HasPrefix(arg, "--title="):
 			opts.Spec.Title = strings.TrimPrefix(arg, "--title=")
 		case strings.HasPrefix(arg, "--sub-file="):
@@ -87,6 +134,30 @@ func Parse(args []string) (Options, error) {
 				return opts, err
 			}
 			opts.Spec.Start = d
+		case strings.HasPrefix(arg, "--render="):
+			mode, err := render.ParseMode(strings.TrimPrefix(arg, "--render="))
+			if err != nil {
+				return opts, err
+			}
+			opts.Render = mode
+		case strings.HasPrefix(arg, "--frames="):
+			n, err := parseCount("--frames", strings.TrimPrefix(arg, "--frames="), 0)
+			if err != nil {
+				return opts, err
+			}
+			opts.Frames = n
+		case strings.HasPrefix(arg, "--cols="):
+			n, err := parseCount("--cols", strings.TrimPrefix(arg, "--cols="), 1)
+			if err != nil {
+				return opts, err
+			}
+			opts.Cols = n
+		case strings.HasPrefix(arg, "--rows="):
+			n, err := parseCount("--rows", strings.TrimPrefix(arg, "--rows="), 1)
+			if err != nil {
+				return opts, err
+			}
+			opts.Rows = n
 		case strings.HasPrefix(arg, "-"):
 			return opts, fmt.Errorf("unknown option %q", arg)
 		default:
@@ -97,6 +168,9 @@ func Parse(args []string) (Options, error) {
 	if len(positionals) > 0 {
 		switch positionals[0] {
 		case "play", "open":
+			positionals = positionals[1:]
+		case "bench":
+			opts.Command = CommandBench
 			positionals = positionals[1:]
 		}
 	}
@@ -130,6 +204,14 @@ func Parse(args []string) (Options, error) {
 		opts.Spec.SubtitleFile = sub
 	}
 	return opts, nil
+}
+
+func parseCount(name, value string, minValue int) (int, error) {
+	n, err := strconv.Atoi(value)
+	if err != nil || n < minValue {
+		return 0, fmt.Errorf("%s needs an integer >= %d", name, minValue)
+	}
+	return n, nil
 }
 
 func normalizeTarget(target string) (string, error) {

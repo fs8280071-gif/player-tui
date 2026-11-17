@@ -13,7 +13,7 @@ import (
 
 	"github.com/fs8280071-gif/player-tui/internal/engine"
 	"github.com/fs8280071-gif/player-tui/internal/engine/libvlc"
-	"github.com/fs8280071-gif/player-tui/internal/render/halfblock"
+	"github.com/fs8280071-gif/player-tui/internal/render"
 	"github.com/fs8280071-gif/player-tui/internal/term"
 	"github.com/fs8280071-gif/player-tui/internal/video"
 )
@@ -26,7 +26,14 @@ type Error struct {
 func (e *Error) Error() string { return e.Err.Error() }
 func (e *Error) Unwrap() error { return e.Err }
 
-func Run(ctx context.Context, spec engine.MediaSpec) error {
+type Options struct {
+	Spec   engine.MediaSpec
+	Render render.Mode
+	Dither bool
+}
+
+func Run(ctx context.Context, opts Options) error {
+	spec := opts.Spec
 	player, err := libvlc.New()
 	if err != nil {
 		return &Error{Code: 4, Err: err}
@@ -51,7 +58,8 @@ func Run(ctx context.Context, spec engine.MediaSpec) error {
 	sigCtx, stopSignals := signal.NotifyContext(runCtx, os.Interrupt, syscall.SIGTERM)
 	defer stopSignals()
 
-	renderer := halfblock.New()
+	mode, _ := render.Resolve(opts.Render)
+	renderer := render.New(mode, opts.Dither)
 	noColor := os.Getenv("NO_COLOR") != ""
 
 	var frameBuf, statusBuf []byte
@@ -124,7 +132,7 @@ func Run(ctx context.Context, spec engine.MediaSpec) error {
 				statusDirty = true
 			}
 			aspect := float64(f.Width) / float64(f.Height)
-			cols, rows, startRow, startCol := halfblock.Fit(w, h, aspect)
+			cols, rows, startRow, startCol := render.Fit(w, h, aspect)
 			frameBuf = renderer.Append(frameBuf, f, cols, rows, startRow, startCol)
 			t.WriteString(string(frameBuf))
 		}
@@ -136,7 +144,7 @@ func Run(ctx context.Context, spec engine.MediaSpec) error {
 			statusDirty = true
 			if lastFrame != nil {
 				aspect := float64(lastFrame.Width) / float64(lastFrame.Height)
-				cols, rows, startRow, startCol := halfblock.Fit(w, h, aspect)
+				cols, rows, startRow, startCol := render.Fit(w, h, aspect)
 				frameBuf = renderer.Append(frameBuf, lastFrame, cols, rows, startRow, startCol)
 				t.WriteString(string(frameBuf))
 			}
@@ -144,13 +152,13 @@ func Run(ctx context.Context, spec engine.MediaSpec) error {
 
 		if statusDirty {
 			statusDirty = false
-			statusBuf = buildStatus(statusBuf, spec.Title, snap, w, h, noColor)
+			statusBuf = buildStatus(statusBuf, spec.Title, snap, w, h, noColor, mode.String())
 			t.WriteString(string(statusBuf))
 		}
 	}
 }
 
-func buildStatus(dst []byte, title string, snap engine.Snapshot, width, height int, noColor bool) []byte {
+func buildStatus(dst []byte, title string, snap engine.Snapshot, width, height int, noColor bool, mode string) []byte {
 	dst = dst[:0]
 	if width < 1 {
 		width = 1
@@ -158,7 +166,7 @@ func buildStatus(dst []byte, title string, snap engine.Snapshot, width, height i
 	if height < 1 {
 		height = 1
 	}
-	left := fmt.Sprintf(" %s  %s / %s  %s", title, formatDuration(snap.Time), formatDuration(snap.Duration), snap.State)
+	left := fmt.Sprintf(" %s  %s / %s  %s  %s", title, formatDuration(snap.Time), formatDuration(snap.Duration), snap.State, mode)
 	right := "space pause  <- -> seek  q quit "
 	line := left
 	pad := width - utf8.RuneCountInString(left) - utf8.RuneCountInString(right)

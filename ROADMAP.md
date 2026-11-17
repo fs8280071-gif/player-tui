@@ -21,8 +21,9 @@ Target: a single local file or direct URL plays smoothly, can be launched from
 the command line, and every exit path restores the terminal.
 
 Current slice: local files and direct URLs play through libVLC with I420
-half-block output, pause/seek/quit, and terminal restore. `play` is an alias for
-`open`. The remaining Phase C items are listed below.
+half-block, quadrant, or sextant output, exact area averaging, optional dither,
+pause/seek/quit, and terminal restore. `play` is an alias for `open`. The
+remaining Phase C items are listed below.
 
 ### C1. Core playback and launcher
 
@@ -48,6 +49,9 @@ half-block output, pause/seek/quit, and terminal restore. `play` is an alias for
 
 - [ ] Capability detection and `doctor` (`V01`, `C09`).
 - [x] Half-block truecolor renderer (`V06`).
+- [x] Quadrant (2x2) and sextant (2x3) block modes, exact area averaging,
+      `--dither`, and `--render auto` with halfblock fallback.
+- [x] In-memory render benchmark with render p50/p95 and display FPS.
 - [ ] Kitty renderer with image IDs, placement, resize, and cleanup (`V03`).
 - [ ] Sixel renderer with palette/repeat handling and cleanup (`V04`).
 - [ ] ASCII fallback for narrow, monochrome, and non-graphics terminals.

@@ -11,7 +11,7 @@ Goals:
 - Play local files and direct URLs with reliable A/V sync in a terminal.
 - Launch from another program with `player-tui open <local-file-or-url>` and
   honor `--title`, `--sub-file`, and `--start`.
-- Render through Kitty, Sixel, half-block, or ASCII, with automatic fallback.
+- Render through Kitty, Sixel, block modes, or ASCII, with automatic fallback.
 - Keep the UI responsive under slow terminals, large frames, and network stalls.
 - Keep libVLC, cgo, terminal protocols, and UI state isolated behind testable
   interfaces.
@@ -69,8 +69,7 @@ internal/config/                TOML, XDG paths, precedence, validation
 internal/engine/                Engine, MediaSpec, events, state, clock
 internal/engine/libvlc/         cgo bindings, callbacks, event bridge
 internal/video/                 Frame, I420 sampling, scaling, frame mailbox
-internal/render/                Renderer contract, capability registry
-internal/render/halfblock/      truecolor cell renderer
+internal/render/                Renderer contract, block modes, capability registry
 internal/render/kitty/          Kitty graphics encoder
 internal/render/sixel/          Sixel encoder
 internal/render/ascii/          luminance/ASCII fallback
@@ -526,8 +525,9 @@ the normal test path.
   interpolation, scheduler drop rules, subtitle parsing, queue rules.
 - Integration: libVLC with a small media corpus; open/play/seek/end/error;
   repeated teardown; race detector.
-- Renderer: golden cell output for half-block/ASCII; protocol byte snapshots and
-  cleanup sequences for Kitty/Sixel; PTY tests for resize and restore.
+- Renderer: golden cell output for halfblock/quadrant/sextant/ASCII; protocol
+  byte snapshots and cleanup sequences for Kitty/Sixel; PTY tests for resize and
+  restore.
 - Terminal: vttest-style manual matrix plus automated PTY tests; test `tmux`,
   `screen`, and `zellij` where practical.
 - Catalog (V1): `httptest` Jellyfin/Plex fakes, DLNA XML fixtures, timeout and
@@ -577,8 +577,9 @@ Open issues to resolve during Phase C:
 
 Phase C design is complete (`TECH_STACK.md`, `DESIGN.md`, `LICENSES.md`). The
 first MVP slice is implemented in `cmd/player-tui` and `internal/{cli,app,term,
-video,render/halfblock,engine/libvlc}`: libVLC I420 callbacks, a polled frame
-copy, truecolor half-block output, pause/seek/quit, and terminal restore. It uses
-`golang.org/x/term` behind a local terminal layer; the Vaxis pane UI and
-Kitty/Sixel renderers remain follow-up work, as do the RV32 fallback, explicit
-frame-drop scheduler, and subtitle rendering.
+video,render,engine/libvlc}`: libVLC I420 callbacks, a polled frame copy, exact
+area-average truecolor block output in halfblock/quadrant/sextant modes,
+optional dithering, pause/seek/quit, terminal restore, and an in-memory render
+benchmark. It uses `golang.org/x/term` behind a local terminal layer; the Vaxis
+pane UI and Kitty/Sixel renderers remain follow-up work, as do the RV32
+fallback, explicit frame-drop scheduler, and subtitle rendering.

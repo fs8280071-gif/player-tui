@@ -96,8 +96,16 @@ All bindings live in one table so help and the palette stay in sync.
 
 ## Visual language
 
-- Truecolor half-block by default; `▀` upper half block, foreground = top pixel,
-  background = bottom pixel.
+- Truecolor block rendering by default. `halfblock` uses `▀` with foreground =
+  top pixel and background = bottom pixel; `quadrant` and `sextant` use 2x2 and
+  2x3 block glyphs with two colors per cell.
+- Exact area averaging is used when a sample covers more than one source pixel.
+  The source aspect ratio drives the centered video rectangle; terminal cells
+  are assumed to be twice as tall as they are wide.
+- `--dither` applies 4x4 Bayer ordered dithering before cell quantization. It is
+  off by default because it more than doubles ANSI output.
+- `auto` picks quadrant for normal terminals and halfblock for `TERM=dumb`,
+  `TERM=linux`, or `PLAYER_TUI_ASCII=1`; font coverage cannot be queried.
 - Themes are TOML with a small fixed set of roles: `bg`, `fg`, `dim`, `accent`,
   `error`, `playing`, `paused`, `border`, `selection`.
 - Ship Catppuccin Mocha, Gruvbox Dark, Nord, and High Contrast.

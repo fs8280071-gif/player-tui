@@ -180,13 +180,14 @@ live ASR/translation, so design the ring buffer and clock once.
 | ID | Feature | Description | Who has it | Demand | Priority | Difficulty | Library / design notes | Source |
 |---|---|---|---|---|---|---|---|---|
 | V01 | Capability detection | Detect Kitty, Sixel, iTerm2, truecolor, cell size, multiplexer, and fallbacks. | Yazi, chafa | High | MVP | Medium | DA1/XTSMGRAPHICS/env/query; `doctor` prints results; never assume. | [YAZI][YAZI] |
-| V02 | Renderer ladder | Automatic choice with manual override: Kitty, iTerm2, Sixel, half-block, ASCII/ANSI. | mpv, Yazi, chafa | High | MVP | Medium | `--render=auto/kitty/sixel/iterm2/halfblock/ascii`; `--no-graphics`. | [MPVT][MPVT] |
+| V02 | Renderer ladder | Automatic choice with manual override: Kitty, iTerm2, Sixel, sextant/quadrant/half-block, ASCII/ANSI. | mpv, Yazi, chafa | High | MVP | Medium | `--render=auto/kitty/sixel/iterm2/sextant/quadrant/halfblock/ascii`; `--no-graphics`. | [MPVT][MPVT] |
 | V03 | Kitty graphics | Raw RGB image, chunked base64, image IDs, placement, delete, resize, animation later. | Kitty, Ghostty, WezTerm, iTerm2, mpv | High | MVP | Medium | Custom encoder; zlib optional; handle tmux/Zellij passthrough; cleanup on exit. | [KITTY][KITTY] |
 | V04 | Sixel | Palette quantization, band encoding, scroll region, cleanup, tmux/screen passthrough. | xterm, WezTerm, Windows Terminal, chafa | High | MVP | Hard | Custom encoder or [`go-sixel`][GOSIXEL]; truecolor to 256 palette; test disposal and scroll. | [AWSY][AWSY] |
 | V05 | iTerm2 inline images | OSC 1337 inline image with width/height and aspect preservation. | iTerm2, WezTerm | Medium | V1 | Medium | Custom encoder; size limits; cleanup; fall back to Kitty/Sixel/half-block. | [ITERM2][ITERM2] |
 | V06 | Half-block truecolor | Two vertical pixels per cell using `▀`; 24-bit color with 256/16 fallback. | mpv, SparkPlayer, chafa | High | MVP | Easy | Custom renderer; batch rows; no per-cell writes; test odd heights. | [MPVT][MPVT] |
+| V06b | Quadrant/sextant truecolor | 2x2 or 2x3 samples per cell with block glyphs; two colors per cell; optional ordered dither. | chafa, mpv | High | MVP | Medium | Clustering pass; exact area averaging; sextant needs Unicode 13 font coverage; halfblock fallback. | [CHAFA][CHAFA] |
 | V07 | ASCII/ANSI fallback | Luminance ramp with optional 256/16 colors; readable at low bandwidth. | mpv, chafa, ncplayer | High | MVP | Easy | Custom; edge enhancement optional; `--ascii-ramp`; no-color mode. | [CHAFA][CHAFA] |
-| V08 | Scaling, crop, letterbox, aspect | Fit video to cells, preserve aspect ratio, crop/zoom, pixel aspect ratio. | mpv, VLC | High | MVP | Medium | Go scaler (`x/image/draw`) at target grid; avoid full-res copies. | [XIMAGE][XIMAGE] |
+| V08 | Scaling, crop, letterbox, aspect | Fit video to cells, preserve aspect ratio, crop/zoom, pixel aspect ratio. | mpv, VLC | High | MVP | Medium | Custom exact area average at the target grid; avoid full-res copies. | [XIMAGE][XIMAGE] |
 | V09 | Frame scheduler and dropping | Render at terminal cadence; drop late frames; never block audio; bounded queues. | mpv, SparkPlayer | High | MVP | Hard | Latest-frame mailbox; audio clock; drop thresholds; metrics in status. | [BENCH](docs/benchmarks/libvlc-callbacks.md) |
 | V10 | Adaptive quality and low bandwidth | Reduce resolution/cells/fps/colors under load or over SSH. | mpv, chafa | High | V1 | Medium | Auto-quality ladder; manual low-bandwidth mode; show current mode. | [MPVT][MPVT] |
 | V11 | Cell size and synchronized output | Query cell pixels; use DEC 2026 synchronized updates where supported. | Terminal-dependent | High | MVP | Medium | CSI 14/16 t; fallback 8x16; guard with capability cache. | [XTERMCTL][XTERMCTL] |
@@ -214,7 +215,9 @@ multiplexer configuration.
 | [Zellij][ZELLIJ] | Native per pane | If host supports | No | `support_kitty_graphics_protocol`; re-advertises Sixel only when host supports it. |
 | GNU Screen | Passthrough | Passthrough | Passthrough | Best-effort; chafa 1.14 supports Kitty/Sixel passthrough for screen. |
 
-Renderer selection order: **Kitty -> iTerm2 -> Sixel -> half-block -> ASCII**.
+Renderer selection order: **Kitty -> iTerm2 -> Sixel -> block modes -> ASCII**.
+Block modes try sextant, then quadrant, then half-block; font coverage cannot be
+queried reliably, so `auto` stays at quadrant unless overridden.
 Prefer Kitty on iTerm2 because the same encoder covers Kitty, Ghostty, WezTerm,
 and iTerm2. Never emit graphics before raw mode/alternate screen is active, and
 always send cleanup on normal exit, signal, panic, and resize.
@@ -421,8 +424,10 @@ AI architecture:
 - Do not enable `avcodec-fast` by default. It is non-spec and error-prone; it
   reduced decoder CPU by about 20-25% in tests but did not improve display fps.
 - `threads=1` hurts 1080p; keep automatic thread selection.
-- Output budget: 120x40 half-block is about 176 KB/frame (5.3 MB/s at 30 fps);
-  200x50 is about 366 KB/frame (11 MB/s). Low-bandwidth mode and dropping are
+- Output budget: current 120x40 block output is about 43-49 KB/frame plain and
+  about 108-141 KB/frame with 4x4 dithering. The earlier nearest-neighbor
+  prototype emitted about 176 KB/frame; SGR caching and exact averaging cut the
+  current plain output substantially. Low-bandwidth mode and dropping are still
   required, not optional.
 
 ### 5.3 Rendering protocols
