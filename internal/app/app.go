@@ -27,13 +27,19 @@ func (e *Error) Unwrap() error { return e.Err }
 
 type Options struct {
 	Spec   engine.MediaSpec
+	Specs  []engine.MediaSpec
 	Render render.Mode
 	Dither bool
 	Audio  bool
 }
 
 func Run(ctx context.Context, opts Options) error {
-	spec := opts.Spec
+	specs := opts.Specs
+	if len(specs) == 0 {
+		specs = []engine.MediaSpec{opts.Spec}
+	}
+	index := 0
+	spec := specs[index]
 	player, err := libvlc.New(opts.Audio)
 	if err != nil {
 		return &Error{Code: 4, Err: err}
@@ -55,6 +61,31 @@ func Run(ctx context.Context, opts Options) error {
 	keys := make(chan term.Key, 16)
 	go t.ReadKeys(runCtx, keys)
 
+	startApplied := spec.Start <= 0
+	startWait := time.Now()
+	var frameBuf, statusBuf []byte
+	var lastFrame *video.Frame
+	lastW, lastH := 0, 0
+	lastState := engine.StateIdle
+	statusDirty := true
+	openAt := func(i int) error {
+		if i < 0 || i >= len(specs) {
+			return nil
+		}
+		if err := player.Open(runCtx, specs[i]); err != nil {
+			return &Error{Code: 3, Err: err}
+		}
+		index = i
+		spec = specs[i]
+		startApplied = spec.Start <= 0
+		startWait = time.Now()
+		lastFrame = nil
+		lastState = engine.StateIdle
+		statusDirty = true
+		t.WriteString("\x1b[2J")
+		return nil
+	}
+
 	sigCtx, stopSignals := signal.NotifyContext(runCtx, os.Interrupt, syscall.SIGTERM)
 	defer stopSignals()
 
@@ -66,14 +97,6 @@ func Run(ctx context.Context, opts Options) error {
 		}
 	}()
 	noColor := os.Getenv("NO_COLOR") != ""
-
-	var frameBuf, statusBuf []byte
-	var lastFrame *video.Frame
-	lastW, lastH := 0, 0
-	startApplied := spec.Start <= 0
-	startWait := time.Now()
-	lastState := engine.StateIdle
-	statusDirty := true
 
 	ticker := time.NewTicker(16 * time.Millisecond)
 	defer ticker.Stop()
@@ -99,6 +122,18 @@ func Run(ctx context.Context, opts Options) error {
 			case term.KeyRight:
 				_ = player.SeekBy(5 * time.Second)
 				statusDirty = true
+			case term.KeyNext:
+				if index+1 < len(specs) {
+					if err := openAt(index + 1); err != nil {
+						return err
+					}
+				}
+			case term.KeyPrev:
+				if index > 0 {
+					if err := openAt(index - 1); err != nil {
+						return err
+					}
+				}
 			}
 		case <-statusTicker.C:
 			statusDirty = true
@@ -157,7 +192,11 @@ func Run(ctx context.Context, opts Options) error {
 
 		if statusDirty {
 			statusDirty = false
-			statusBuf = buildStatus(statusBuf, spec.Title, snap, w, h, noColor, mode.String())
+			title := spec.Title
+			if len(specs) > 1 {
+				title = fmt.Sprintf("[%d/%d] %s", index+1, len(specs), title)
+			}
+			statusBuf = buildStatus(statusBuf, title, snap, w, h, noColor, mode.String())
 			t.WriteString(string(statusBuf))
 		}
 	}

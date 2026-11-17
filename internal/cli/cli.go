@@ -25,6 +25,7 @@ const (
 type Options struct {
 	Command Command
 	Spec    engine.MediaSpec
+	Specs   []engine.MediaSpec
 	Render  render.Mode
 	Dither  bool
 	Frames  int
@@ -44,7 +45,7 @@ func (e *TargetError) Unwrap() error { return e.Err }
 const Usage = `player-tui - play media in the terminal
 
 Usage:
-  player-tui play <file-or-url> [options]
+  player-tui play <file-or-url> [file-or-url ...] [options]
   player-tui open <file-or-url> [options]
   player-tui <file-or-url> [options]
   player-tui bench <file-or-url> [options]
@@ -197,32 +198,40 @@ func Parse(args []string) (Options, error) {
 	if len(positionals) == 0 {
 		return opts, errors.New("missing media target")
 	}
-	if len(positionals) > 1 {
-		return opts, fmt.Errorf("unexpected extra argument %q", positionals[1])
+	if opts.Command == CommandBench && len(positionals) > 1 {
+		return opts, fmt.Errorf("bench accepts one media target (got %d)", len(positionals))
+	}
+	if opts.Spec.Title != "" && len(positionals) > 1 {
+		return opts, errors.New("--title can only be used with a single target")
 	}
 
-	target, err := normalizeTarget(positionals[0])
-	if err != nil {
-		return opts, err
-	}
-	opts.Spec.Target = target
-
-	if opts.Spec.Title == "" {
-		if isURL(target) {
-			opts.Spec.Title = target
-		} else {
-			opts.Spec.Title = filepath.Base(target)
-		}
-	}
-	opts.Spec.Title = sanitizeText(opts.Spec.Title)
-
-	if opts.Spec.SubtitleFile != "" {
-		sub, err := normalizeTarget(opts.Spec.SubtitleFile)
+	for i, raw := range positionals {
+		target, err := normalizeTarget(raw)
 		if err != nil {
-			return opts, fmt.Errorf("subtitle: %w", err)
+			return opts, err
 		}
-		opts.Spec.SubtitleFile = sub
+		spec := engine.MediaSpec{
+			Target: target,
+			Start:  opts.Spec.Start,
+		}
+		if opts.Spec.Title != "" {
+			spec.Title = opts.Spec.Title
+		} else if isURL(target) {
+			spec.Title = target
+		} else {
+			spec.Title = filepath.Base(target)
+		}
+		spec.Title = sanitizeText(spec.Title)
+		if i == 0 && opts.Spec.SubtitleFile != "" {
+			sub, err := normalizeTarget(opts.Spec.SubtitleFile)
+			if err != nil {
+				return opts, fmt.Errorf("subtitle: %w", err)
+			}
+			spec.SubtitleFile = sub
+		}
+		opts.Specs = append(opts.Specs, spec)
 	}
+	opts.Spec = opts.Specs[0]
 	return opts, nil
 }
 

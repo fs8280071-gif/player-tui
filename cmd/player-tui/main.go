@@ -69,6 +69,7 @@ func run(args []string) int {
 
 	if err := app.Run(context.Background(), app.Options{
 		Spec:   opts.Spec,
+		Specs:  opts.Specs,
 		Render: opts.Render,
 		Dither: opts.Dither,
 		Audio:  opts.Audio,

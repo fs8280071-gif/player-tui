@@ -20,6 +20,8 @@ const (
 	KeyUp
 	KeyDown
 	KeyMute
+	KeyNext
+	KeyPrev
 	KeyQuit
 	KeyEsc
 )
@@ -81,6 +83,10 @@ func (t *Terminal) ReadKeys(ctx context.Context, out chan<- Key) {
 			k = KeySpace
 		case 'm', 'M':
 			k = KeyMute
+		case 'n', 'N':
+			k = KeyNext
+		case 'p', 'P':
+			k = KeyPrev
 		case 0x1b:
 			k = readEscape(r)
 		default:

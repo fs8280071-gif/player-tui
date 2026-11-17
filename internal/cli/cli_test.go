@@ -151,3 +151,27 @@ func TestParseDoctor(t *testing.T) {
 		t.Fatal("doctor accepted an argument")
 	}
 }
+
+func TestParseQueue(t *testing.T) {
+	dir := t.TempDir()
+	a := filepath.Join(dir, "a.mp4")
+	b := filepath.Join(dir, "b.mp4")
+	for _, p := range []string{a, b} {
+		if err := os.WriteFile(p, []byte("x"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	opts, err := Parse([]string{"play", a, b})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(opts.Specs) != 2 || opts.Specs[0].Target != a || opts.Specs[1].Target != b {
+		t.Fatalf("queue = %+v", opts.Specs)
+	}
+	if opts.Spec.Target != a {
+		t.Fatalf("first spec = %+v", opts.Spec)
+	}
+	if _, err := Parse([]string{"play", a, b, "--title", "one"}); err == nil {
+		t.Fatal("--title accepted with multiple targets")
+	}
+}
