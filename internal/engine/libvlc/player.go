@@ -217,6 +217,7 @@ func (p *Player) Snapshot() engine.Snapshot {
 		Seekable: C.libvlc_media_player_is_seekable(p.mp) == 1,
 		Volume:   p.volumeLocked(),
 		Muted:    p.mutedLocked(),
+		Rate:     p.rateLocked(),
 	}
 	if snap.State == engine.StateError {
 		snap.Error = vlcErr()
@@ -366,6 +367,10 @@ func (p *Player) volumeLocked() int {
 
 func (p *Player) mutedLocked() bool {
 	return C.libvlc_audio_get_mute(p.mp) == 1
+}
+
+func (p *Player) rateLocked() float64 {
+	return float64(C.libvlc_media_player_get_rate(p.mp))
 }
 
 func (p *Player) durationLocked() time.Duration {

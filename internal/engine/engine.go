@@ -54,6 +54,7 @@ type Snapshot struct {
 	Seekable bool
 	Volume   int
 	Muted    bool
+	Rate     float64
 	Error    string
 }
 
@@ -68,6 +69,10 @@ type Player interface {
 	SetVolume(int) error
 	Muted() bool
 	SetMuted(bool) error
+	Rate() float64
+	SetRate(float64) error
+	CycleSubtitle() (string, error)
+	CycleAudio() (string, error)
 	Snapshot() Snapshot
 	LatestFrame() *video.Frame
 	Close() error

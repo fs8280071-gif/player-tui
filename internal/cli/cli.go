@@ -8,10 +8,10 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"unicode"
 
 	"github.com/fs8280071-gif/player-tui/internal/engine"
 	"github.com/fs8280071-gif/player-tui/internal/render"
+	"github.com/fs8280071-gif/player-tui/internal/sanitize"
 )
 
 type Command int
@@ -67,6 +67,12 @@ Options:
 Keys:
   space                 play / pause
   left / right          seek -5s / +5s
+  + / -                 volume +/- 5%
+  m                     mute / unmute
+  [ / ]                 slower / faster
+  s / a                 cycle subtitle / audio track
+  n / p                 next / previous file
+  ?                     help overlay
   q                     quit
 `
 
@@ -304,20 +310,7 @@ func ParseTime(s string) (time.Duration, error) {
 }
 
 func sanitizeText(s string) string {
-	s = strings.Map(func(r rune) rune {
-		if r == '\t' {
-			return ' '
-		}
-		if unicode.IsControl(r) {
-			return -1
-		}
-		return r
-	}, s)
-	s = strings.TrimSpace(s)
-	runes := []rune(s)
-	if len(runes) > 200 {
-		s = string(runes[:200])
-	}
+	s = sanitize.Text(s)
 	if s == "" {
 		return "player-tui"
 	}

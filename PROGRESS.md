@@ -102,6 +102,8 @@
   render FPS, and bytes per frame.
 - PTY-tested halfblock, quadrant, sextant, auto, and dither at 320x240 and
   1920x1088; all modes restored the terminal and exited cleanly.
+- Added volume +/- and mute, speed [ / ], subtitle/audio track cycling, a
+  help overlay (`?`), and speed/track notices in the status row.
 - Added a multi-file queue (`player-tui play a.mp4 b.mp4`) with `n`/`p` for
   next/previous and a `[current/total]` status prefix.
 - Added `--audio` (default off; libVLC uses a dummy output unless enabled) and

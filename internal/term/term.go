@@ -24,6 +24,13 @@ const (
 	KeyPrev
 	KeyQuit
 	KeyEsc
+	KeyVolumeUp
+	KeyVolumeDown
+	KeySpeedUp
+	KeySpeedDown
+	KeySubtitle
+	KeyAudio
+	KeyHelp
 )
 
 type Terminal struct {
@@ -87,6 +94,20 @@ func (t *Terminal) ReadKeys(ctx context.Context, out chan<- Key) {
 			k = KeyNext
 		case 'p', 'P':
 			k = KeyPrev
+		case '+', '=':
+			k = KeyVolumeUp
+		case '-', '_':
+			k = KeyVolumeDown
+		case ']':
+			k = KeySpeedUp
+		case '[':
+			k = KeySpeedDown
+		case 's', 'S':
+			k = KeySubtitle
+		case 'a', 'A':
+			k = KeyAudio
+		case '?':
+			k = KeyHelp
 		case 0x1b:
 			k = readEscape(r)
 		default:

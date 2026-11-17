@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -13,6 +14,7 @@ import (
 	"github.com/fs8280071-gif/player-tui/internal/engine"
 	"github.com/fs8280071-gif/player-tui/internal/engine/libvlc"
 	"github.com/fs8280071-gif/player-tui/internal/render"
+	"github.com/fs8280071-gif/player-tui/internal/sanitize"
 	"github.com/fs8280071-gif/player-tui/internal/term"
 	"github.com/fs8280071-gif/player-tui/internal/video"
 )
@@ -97,6 +99,14 @@ func Run(ctx context.Context, opts Options) error {
 		}
 	}()
 	noColor := os.Getenv("NO_COLOR") != ""
+	helpVisible := false
+	notice := ""
+	noticeUntil := time.Time{}
+	setNotice := func(text string) {
+		notice = sanitize.Text(text)
+		noticeUntil = time.Now().Add(3 * time.Second)
+		statusDirty = true
+	}
 
 	ticker := time.NewTicker(16 * time.Millisecond)
 	defer ticker.Stop()
@@ -134,6 +144,52 @@ func Run(ctx context.Context, opts Options) error {
 						return err
 					}
 				}
+			case term.KeyVolumeUp:
+				if err := player.SetVolume(player.Volume() + 5); err != nil {
+					setNotice(err.Error())
+				}
+				statusDirty = true
+			case term.KeyVolumeDown:
+				if err := player.SetVolume(player.Volume() - 5); err != nil {
+					setNotice(err.Error())
+				}
+				statusDirty = true
+			case term.KeyMute:
+				if err := player.SetMuted(!player.Muted()); err != nil {
+					setNotice(err.Error())
+				}
+				statusDirty = true
+			case term.KeySpeedUp:
+				rate := player.Rate()
+				if rate <= 0 {
+					rate = 1
+				}
+				_ = player.SetRate(rate + 0.25)
+				statusDirty = true
+			case term.KeySpeedDown:
+				rate := player.Rate()
+				if rate <= 0 {
+					rate = 1
+				}
+				_ = player.SetRate(rate - 0.25)
+				statusDirty = true
+			case term.KeySubtitle:
+				name, err := player.CycleSubtitle()
+				if err != nil {
+					setNotice("subtitle: " + err.Error())
+				} else {
+					setNotice("subtitle: " + name)
+				}
+			case term.KeyAudio:
+				name, err := player.CycleAudio()
+				if err != nil {
+					setNotice("audio: " + err.Error())
+				} else {
+					setNotice("audio: " + name)
+				}
+			case term.KeyHelp:
+				helpVisible = !helpVisible
+				statusDirty = true
 			}
 		case <-statusTicker.C:
 			statusDirty = true
@@ -190,19 +246,26 @@ func Run(ctx context.Context, opts Options) error {
 			}
 		}
 
+		if notice != "" && time.Now().After(noticeUntil) {
+			notice = ""
+			statusDirty = true
+		}
 		if statusDirty {
 			statusDirty = false
 			title := spec.Title
 			if len(specs) > 1 {
 				title = fmt.Sprintf("[%d/%d] %s", index+1, len(specs), title)
 			}
-			statusBuf = buildStatus(statusBuf, title, snap, w, h, noColor, mode.String())
+			statusBuf = buildStatus(statusBuf, title, snap, w, h, noColor, mode.String(), snap.Rate, notice)
 			t.WriteString(string(statusBuf))
+		}
+		if helpVisible {
+			t.WriteString(string(buildHelp(w, h, noColor)))
 		}
 	}
 }
 
-func buildStatus(dst []byte, title string, snap engine.Snapshot, width, height int, noColor bool, mode string) []byte {
+func buildStatus(dst []byte, title string, snap engine.Snapshot, width, height int, noColor bool, mode string, rate float64, notice string) []byte {
 	dst = dst[:0]
 	if width < 1 {
 		width = 1
@@ -214,8 +277,15 @@ func buildStatus(dst []byte, title string, snap engine.Snapshot, width, height i
 	if snap.Muted {
 		vol = "muted"
 	}
-	left := fmt.Sprintf(" %s  %s / %s  %s  vol %s  %s", title, formatDuration(snap.Time), formatDuration(snap.Duration), snap.State, vol, mode)
-	right := "space pause  <- -> seek  q quit "
+	rateText := ""
+	if rate > 0 && (rate < 0.99 || rate > 1.01) {
+		rateText = fmt.Sprintf(" x%.2f", rate)
+	}
+	left := fmt.Sprintf(" %s  %s / %s  %s  vol %s%s  %s", title, formatDuration(snap.Time), formatDuration(snap.Duration), snap.State, vol, rateText, mode)
+	if notice != "" {
+		left += "  " + notice
+	}
+	right := "space pause  <- -> seek  ? help  q quit "
 	line := left
 	pad := width - utf8.RuneCountInString(left) - utf8.RuneCountInString(right)
 	switch {
@@ -283,4 +353,64 @@ func appendInt(dst []byte, n int) []byte {
 		n /= 10
 	}
 	return append(dst, tmp[i:]...)
+}
+
+func buildHelp(width, height int, noColor bool) []byte {
+	lines := []string{
+		" player-tui keys ",
+		"",
+		" space          pause / resume",
+		" left / right   seek -5s / +5s",
+		" + / -          volume +/- 5%",
+		" m              mute / unmute",
+		" [ / ]          slower / faster",
+		" s              cycle subtitle track",
+		" a              cycle audio track",
+		" n / p          next / previous file",
+		" ?              close this help",
+		" q              quit",
+		"",
+	}
+	boxW := 38
+	for _, line := range lines {
+		if n := utf8.RuneCountInString(line) + 2; n > boxW {
+			boxW = n
+		}
+	}
+	if boxW > width {
+		boxW = width
+	}
+	if boxW < 4 {
+		return nil
+	}
+	startCol := (width - boxW) / 2
+	if startCol < 0 {
+		startCol = 0
+	}
+	startRow := (height - len(lines)) / 2
+	if startRow < 1 {
+		startRow = 1
+	}
+	var dst []byte
+	for i, line := range lines {
+		if startRow+i > height {
+			break
+		}
+		dst = append(dst, "\x1b["...)
+		dst = strconv.AppendInt(dst, int64(startRow+i), 10)
+		dst = append(dst, ';')
+		dst = strconv.AppendInt(dst, int64(startCol+1), 10)
+		dst = append(dst, 'H')
+		dst = append(dst, "\x1b[0m"...)
+		if noColor {
+			dst = append(dst, "\x1b[7m"...)
+		} else {
+			dst = append(dst, "\x1b[40m\x1b[97m"...)
+		}
+		line = truncate(line, boxW)
+		dst = append(dst, line...)
+		dst = append(dst, strings.Repeat(" ", max(0, boxW-utf8.RuneCountInString(line)))...)
+		dst = append(dst, "\x1b[0m"...)
+	}
+	return dst
 }
