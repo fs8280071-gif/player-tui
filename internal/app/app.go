@@ -108,6 +108,7 @@ func Run(ctx context.Context, opts Options) error {
 	startWait := time.Now()
 	var frameBuf, statusBuf []byte
 	var lastFrame *video.Frame
+	var sawMedia bool
 	lastW, lastH := 0, 0
 	lastState := engine.StateIdle
 	statusDirty := true
@@ -131,6 +132,7 @@ func Run(ctx context.Context, opts Options) error {
 		startApplied = pendingStart <= 0
 		startWait = time.Now()
 		lastFrame = nil
+		sawMedia = false
 		lastState = engine.StateIdle
 		statusDirty = true
 		t.WriteString("\x1b[2J")
@@ -263,6 +265,12 @@ func Run(ctx context.Context, opts Options) error {
 			}
 			return &Error{Code: 3, Err: fmt.Errorf("%s (%s)", msg, spec.Title)}
 		}
+		if endedEmpty(snap, sawMedia) {
+			return &Error{Code: 3, Err: fmt.Errorf("cannot play %s: unreadable or unsupported media", spec.Title)}
+		}
+		if snap.State == engine.StatePlaying || snap.Duration > 0 || snap.Time > 0 {
+			sawMedia = true
+		}
 		if snap.State != lastState {
 			lastState = snap.State
 			statusDirty = true
@@ -285,6 +293,7 @@ func Run(ctx context.Context, opts Options) error {
 		}
 
 		if f := player.LatestFrame(); f != nil {
+			sawMedia = true
 			lastFrame = f
 			w, h := t.Size()
 			if w != lastW || h != lastH {
@@ -477,4 +486,8 @@ func buildHelp(width, height int, noColor bool, th theme.Theme) []byte {
 		dst = append(dst, "\x1b[0m"...)
 	}
 	return dst
+}
+
+func endedEmpty(snap engine.Snapshot, sawMedia bool) bool {
+	return snap.State == engine.StateEnded && !sawMedia && snap.Duration <= 0 && snap.Time <= 0
 }

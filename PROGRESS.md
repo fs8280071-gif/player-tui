@@ -110,6 +110,9 @@
   mute, speed, track cycling, help overlay, queue next/previous, and quit all
   exited 0; every renderer emitted its expected marker and restored the
   alternate screen. Status now shows `vol off` when audio is disabled.
+- Verified resume end to end: a 5.2 s position was saved and the next launch
+  started at 00:05. A text file renamed `.mp4` now exits 3 with
+  `cannot play <file>: unreadable or unsupported media` instead of exiting 0.
 - Added a file browser: running `player-tui` with no arguments or
   `player-tui browse [dir]` lists directories and files with j/k, arrows, enter,
   h/backspace, `?`, and q; selecting a file starts playback.
@@ -159,20 +162,21 @@
 
 ## Next
 
-- Continue the MVP: `doctor`, frame scheduler/drop metrics, external subtitle
-  cues, queue/playlists, and the Vaxis pane UI. Validate graphics encoders on
-  real terminals.
+- MVP follow-ups: frame scheduler/drop metrics, external subtitle cue rendering,
+  playlists, and the Vaxis pane UI. Validate Kitty/Sixel/iTerm2 on real terminals
+  and audio on a configured PulseAudio output.
 - Renderer follow-ups: automatic font/tofu probing where possible, a
   low-bandwidth mode, and a summed-area-table path if 1080p60 becomes a target.
-- AI v1 follows MVP: offline ASR, VAD, batch jobs, model manager, privacy/wipe,
-  and scheduler. Live audio-tap features remain V2.
+- AI features were intentionally not started; V1 follows the roadmap: offline
+  ASR, VAD, batch jobs, model manager, privacy/wipe, and scheduler.
 
 ## Blocked / open
 
-- Terminal here has no Kitty/Sixel and no audio output; graphics encoders and
-  audio paths need unit tests and external/real-device tests.
-- Real audio is not configured yet; PulseAudio over TCP from Termux is the next
-  audio step, followed by audio-master-clock sync.
+- Terminal here has no Kitty/Sixel/iTerm2 display and no audio output; encoders
+  are unit/PTY-tested but not visually validated on real devices, and only the
+  dummy audio path has run. See `EVENING.md` for manual steps.
+- PulseAudio over TCP from Termux is documented in `docs/AUDIO-SETUP.md` but its
+  Termux-side commands were not executed; audio-master-clock sync follows.
 - End-to-end 1080p performance varies with phone thermal state; laptop
   benchmarks are still required.
 - GitHub exact-name conflict is unresolved; pick a distinctive name before

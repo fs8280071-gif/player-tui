@@ -26,3 +26,16 @@ func TestBuildStatusFields(t *testing.T) {
 		t.Errorf("audio-off status = %q", out)
 	}
 }
+
+func TestEndedWithoutMediaMessagesCorrupt(t *testing.T) {
+	ended := engine.Snapshot{State: engine.StateEnded}
+	if !endedEmpty(ended, false) {
+		t.Fatal("ended with no frames/duration should report corrupt input")
+	}
+	if endedEmpty(ended, true) {
+		t.Fatal("ended after media should be a normal end")
+	}
+	if endedEmpty(engine.Snapshot{State: engine.StateEnded, Duration: 10 * time.Second}, false) {
+		t.Fatal("ended with duration should be a normal end")
+	}
+}
