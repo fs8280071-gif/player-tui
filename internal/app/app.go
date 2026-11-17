@@ -2,7 +2,6 @@ package app
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"os/signal"
@@ -111,7 +110,7 @@ func Run(ctx context.Context, opts Options) error {
 			if msg == "" {
 				msg = "playback failed"
 			}
-			return &Error{Code: 3, Err: errors.New(msg)}
+			return &Error{Code: 3, Err: fmt.Errorf("%s (%s)", msg, spec.Title)}
 		}
 		if snap.State != lastState {
 			lastState = snap.State
@@ -171,7 +170,11 @@ func buildStatus(dst []byte, title string, snap engine.Snapshot, width, height i
 	if height < 1 {
 		height = 1
 	}
-	left := fmt.Sprintf(" %s  %s / %s  %s  %s", title, formatDuration(snap.Time), formatDuration(snap.Duration), snap.State, mode)
+	vol := fmt.Sprintf("%d%%", snap.Volume)
+	if snap.Muted {
+		vol = "muted"
+	}
+	left := fmt.Sprintf(" %s  %s / %s  %s  vol %s  %s", title, formatDuration(snap.Time), formatDuration(snap.Duration), snap.State, vol, mode)
 	right := "space pause  <- -> seek  q quit "
 	line := left
 	pad := width - utf8.RuneCountInString(left) - utf8.RuneCountInString(right)

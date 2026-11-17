@@ -19,6 +19,7 @@ type Command int
 const (
 	CommandPlay Command = iota
 	CommandBench
+	CommandDoctor
 )
 
 type Options struct {
@@ -46,6 +47,7 @@ Usage:
   player-tui open <file-or-url> [options]
   player-tui <file-or-url> [options]
   player-tui bench <file-or-url> [options]
+  player-tui doctor
 
 Options:
   --render <mode>       kitty, sixel, iterm2, halfblock, quadrant,
@@ -68,7 +70,20 @@ Keys:
 func Parse(args []string) (Options, error) {
 	opts := Options{Render: render.ModeAuto, Cols: 120, Rows: 40}
 	if len(args) == 0 {
-		return opts, errors.New("missing media target")
+		return opts, errors.New("missing media target (or run: player-tui)")
+	}
+	if args[0] == "doctor" {
+		opts.Command = CommandDoctor
+		for _, arg := range args[1:] {
+			switch arg {
+			case "-h", "--help":
+				opts.Help = true
+				return opts, nil
+			default:
+				return opts, fmt.Errorf("doctor takes no arguments (got %q)", arg)
+			}
+		}
+		return opts, nil
 	}
 
 	var positionals []string
@@ -239,10 +254,13 @@ func normalizeTarget(target string) (string, error) {
 		return "", &TargetError{Err: fmt.Errorf("cannot read %q: %w", target, err)}
 	}
 	if info.IsDir() {
-		return "", &TargetError{Err: fmt.Errorf("%q is a directory; pass a media file", target)}
+		return "", &TargetError{Err: fmt.Errorf("%q is a directory; pass a media file (or run player-tui to browse)", target)}
 	}
 	if !info.Mode().IsRegular() {
 		return "", &TargetError{Err: fmt.Errorf("%q is not a regular file", target)}
+	}
+	if info.Size() == 0 {
+		return "", &TargetError{Err: fmt.Errorf("%q is empty (corrupt or unfinished download?)", target)}
 	}
 	return abs, nil
 }

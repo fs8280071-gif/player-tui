@@ -102,6 +102,10 @@
   render FPS, and bytes per frame.
 - PTY-tested halfblock, quadrant, sextant, auto, and dither at 320x240 and
   1920x1088; all modes restored the terminal and exited cleanly.
+- Added a `doctor` command (terminal size, TERM/COLORTERM/TERM_PROGRAM,
+  graphics/truecolor detection, chosen render mode, fallbacks), volume and mute
+  fields in the status snapshot, percentage in the status row, and explicit
+  errors for missing, empty, directory, and space-containing paths.
 - Added Kitty, Sixel, and iTerm2 encoders as separate packages
   (`internal/render/{kitty,sixel,iterm2}`) with unit tests against fixed byte
   sequences, `--render kitty|sixel|iterm2`, and auto-detection from

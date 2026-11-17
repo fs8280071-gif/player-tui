@@ -3,6 +3,7 @@ package cli
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -107,5 +108,42 @@ func TestParseRenderEquals(t *testing.T) {
 	}
 	if _, err := Parse([]string{"play", path, "--render", "bogus"}); err == nil {
 		t.Fatal("invalid render mode accepted")
+	}
+}
+
+func TestParseSpaceContainingPath(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "my clip (final).mp4")
+	if err := os.WriteFile(path, []byte("x"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	opts, err := Parse([]string{"play", path})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if opts.Spec.Title != "my clip (final).mp4" {
+		t.Fatalf("title = %q", opts.Spec.Title)
+	}
+}
+
+func TestParseEmptyFile(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "broken.mp4")
+	if err := os.WriteFile(path, nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	_, err := Parse([]string{"play", path})
+	if err == nil || !strings.Contains(err.Error(), "empty") {
+		t.Fatalf("expected empty-file error, got %v", err)
+	}
+}
+
+func TestParseDoctor(t *testing.T) {
+	opts, err := Parse([]string{"doctor"})
+	if err != nil || opts.Command != CommandDoctor {
+		t.Fatalf("doctor parse: %+v %v", opts, err)
+	}
+	if _, err := Parse([]string{"doctor", "extra"}); err == nil {
+		t.Fatal("doctor accepted an argument")
 	}
 }

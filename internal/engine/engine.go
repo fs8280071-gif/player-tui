@@ -52,6 +52,8 @@ type Snapshot struct {
 	Time     time.Duration
 	Duration time.Duration
 	Seekable bool
+	Volume   int
+	Muted    bool
 	Error    string
 }
 
@@ -62,6 +64,10 @@ type Player interface {
 	Toggle() error
 	Seek(time.Duration) error
 	SeekBy(time.Duration) error
+	Volume() int
+	SetVolume(int) error
+	Muted() bool
+	SetMuted(bool) error
 	Snapshot() Snapshot
 	LatestFrame() *video.Frame
 	Close() error

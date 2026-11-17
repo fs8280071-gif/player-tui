@@ -8,6 +8,7 @@ import (
 
 	"github.com/fs8280071-gif/player-tui/internal/app"
 	"github.com/fs8280071-gif/player-tui/internal/cli"
+	xterm "golang.org/x/term"
 )
 
 func main() {
@@ -27,6 +28,14 @@ func run(args []string) int {
 	}
 	if opts.Help {
 		fmt.Print(cli.Usage)
+		return 0
+	}
+
+	if opts.Command == cli.CommandDoctor {
+		w, h, err := xterm.GetSize(int(os.Stdout.Fd()))
+		fmt.Print(app.Doctor(os.Getenv, app.DoctorOptions{
+			Width: w, Height: h, TTY: err == nil, Render: opts.Render,
+		}))
 		return 0
 	}
 

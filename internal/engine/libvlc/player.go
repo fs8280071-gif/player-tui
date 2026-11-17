@@ -215,6 +215,8 @@ func (p *Player) Snapshot() engine.Snapshot {
 		Time:     p.timeLocked(),
 		Duration: p.durationLocked(),
 		Seekable: C.libvlc_media_player_is_seekable(p.mp) == 1,
+		Volume:   p.volumeLocked(),
+		Muted:    p.mutedLocked(),
 	}
 	if snap.State == engine.StateError {
 		snap.Error = vlcErr()
@@ -354,6 +356,18 @@ func (p *Player) timeLocked() time.Duration {
 	return time.Duration(t) * time.Millisecond
 }
 
+func (p *Player) volumeLocked() int {
+	v := int(C.libvlc_audio_get_volume(p.mp))
+	if v < 0 {
+		return 0
+	}
+	return v
+}
+
+func (p *Player) mutedLocked() bool {
+	return C.libvlc_audio_get_mute(p.mp) == 1
+}
+
 func (p *Player) durationLocked() time.Duration {
 	if p.mp == nil {
 		return 0
@@ -396,4 +410,58 @@ func isURL(target string) bool {
 		}
 	}
 	return false
+}
+
+func (p *Player) Volume() int {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if p.mp == nil {
+		return 0
+	}
+	v := int(C.libvlc_audio_get_volume(p.mp))
+	if v < 0 {
+		return 0
+	}
+	return v
+}
+
+func (p *Player) SetVolume(volume int) error {
+	if volume < 0 {
+		volume = 0
+	}
+	if volume > 200 {
+		volume = 200
+	}
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if p.mp == nil {
+		return errors.New("nothing is open")
+	}
+	if C.libvlc_audio_set_volume(p.mp, C.int(volume)) != 0 {
+		return fmt.Errorf("cannot set volume: %s", vlcErr())
+	}
+	return nil
+}
+
+func (p *Player) Muted() bool {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if p.mp == nil {
+		return false
+	}
+	return C.libvlc_audio_get_mute(p.mp) == 1
+}
+
+func (p *Player) SetMuted(muted bool) error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if p.mp == nil {
+		return errors.New("nothing is open")
+	}
+	v := C.int(0)
+	if muted {
+		v = 1
+	}
+	C.libvlc_audio_set_mute(p.mp, v)
+	return nil
 }
