@@ -41,7 +41,7 @@ func Doctor(getenv func(string) string, opts DoctorOptions) string {
 	fmt.Fprintf(&b, "sixel: %t\n", caps.Sixel)
 	fmt.Fprintf(&b, "iterm2 inline: %t\n", caps.ITerm2)
 	fmt.Fprintf(&b, "render: %s (from %s), auto would pick %s\n", mode, source, auto)
-	b.WriteString("fallback: quadrant -> halfblock (TERM=dumb/linux or PLAYER_TUI_ASCII=1)\n")
+	b.WriteString("selection order: kitty -> iterm2 -> sixel -> quadrant; halfblock for TERM=dumb/linux or PLAYER_TUI_ASCII=1\n")
 	b.WriteString("audio: off by default; pass --audio to enable libVLC audio output\n")
 	b.WriteString("graphics encoders are unit-tested but not validated on this terminal\n")
 	return b.String()

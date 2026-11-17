@@ -102,6 +102,10 @@
   render FPS, and bytes per frame.
 - PTY-tested halfblock, quadrant, sextant, auto, and dither at 320x240 and
   1920x1088; all modes restored the terminal and exited cleanly.
+- Updated `README.md` with usage, option/key tables, render modes, a terminal
+  compatibility table (real-device graphics rows marked untested), config/resume,
+  audio, `doctor`, benchmarks, exit codes, and development commands. Verified
+  `install.sh` from a fresh local clone into `$HOME/.local/bin` with PATH present.
 - PTY smoke-tested playback with a 10 s 720p clip: pause, seek, volume keys,
   mute, speed, track cycling, help overlay, queue next/previous, and quit all
   exited 0; every renderer emitted its expected marker and restored the
